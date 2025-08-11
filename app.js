@@ -1,9 +1,7 @@
-// -------- Helpers --------
 const $ = (q) => document.querySelector(q);
 const $$ = (q) => Array.from(document.querySelectorAll(q));
 const byMonth = (isoDate) => isoDate?.slice(0,7);
 
-// calc hours including overnight
 function calcHours(start, end, pauze) {
   if (!start || !end) return 0;
   const [sh, sm] = start.split(':').map(Number);
@@ -14,56 +12,55 @@ function calcHours(start, end, pauze) {
 }
 function fmtDate(d) { try { return new Date(d).toLocaleDateString('nl-NL'); } catch { return d; } }
 
-// -------- Auth UI switches --------
+const auth = () => window.auth;
+const db   = () => window.db;
+
 const authView = $('#auth-view');
 const registerCard = $('#register-card');
 const appView = $('#app-view');
-$('#to-register').onclick = (e)=>{ e.preventDefault(); registerCard.classList.remove('hidden'); }
-$('#to-login').onclick = (e)=>{ e.preventDefault(); registerCard.classList.add('hidden'); }
-$('#forgot').onclick = async (e)=>{
+$('#to-register')?.addEventListener('click',(e)=>{ e.preventDefault(); registerCard.classList.remove('hidden'); });
+$('#to-login')?.addEventListener('click',(e)=>{ e.preventDefault(); registerCard.classList.add('hidden'); });
+$('#forgot')?.addEventListener('click', async (e)=>{
   e.preventDefault();
   const email = prompt('Vul je e-mailadres in voor reset-link:');
   if (!email) return;
-  try { await auth.sendPasswordResetEmail(email); alert('Reset e-mail verstuurd.'); }
-  catch(err){ alert(err.message); }
-};
-
-// -------- Auth actions --------
-$('#login-form').addEventListener('submit', async (e)=>{
-  e.preventDefault();
-  const email = $('#login-email').value.trim();
-  const pass  = $('#login-pass').value;
-  try { await auth.signInWithEmailAndPassword(email, pass); }
+  try { await auth().sendPasswordResetEmail(email); alert('Reset e-mail verstuurd.'); }
   catch(err){ alert(err.message); }
 });
-$('#register-form').addEventListener('submit', async (e)=>{
+
+document.getElementById('login-form')?.addEventListener('submit', async (e)=>{
   e.preventDefault();
-  const email = $('#reg-email').value.trim();
-  const pass  = $('#reg-pass').value;
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-pass').value;
+  try { await auth().signInWithEmailAndPassword(email, pass); }
+  catch(err){ alert(err.message); }
+});
+document.getElementById('register-form')?.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const email = document.getElementById('reg-email').value.trim();
+  const pass  = document.getElementById('reg-pass').value;
   try { 
-    const cred = await auth.createUserWithEmailAndPassword(email, pass);
-    // maak user-profiel document
-    await db.collection('users').doc(cred.user.uid).set({
+    const cred = await auth().createUserWithEmailAndPassword(email, pass);
+    await db().collection('users').doc(cred.user.uid).set({
       email, role: 'user', createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     alert('Account aangemaakt. Je bent ingelogd.');
   } catch(err){ alert(err.message); }
 });
-$('#logout').addEventListener('click', ()=> auth.signOut());
+document.getElementById('logout')?.addEventListener('click', ()=> auth().signOut());
 
-// -------- Data render --------
 let unsubscribe = null;
 let currentUser = null;
 let allRows = [];
 
 function attachRealtimeListeners(isAdmin) {
   if (unsubscribe) { unsubscribe(); unsubscribe = null; }
-  const month = $('#filterMaand').value;
+  const month = document.getElementById('filterMaand').value;
   let q;
   if (isAdmin) {
-    q = db.collectionGroup('entries').where('month','==',month).orderBy('createdAt','desc');
+    q = db().collectionGroup('entries').where('month','==',month).orderBy('createdAt','desc');
   } else {
-    q = db.collection('users').doc(currentUser.uid).collection('entries')
+    q = db().collection('users').doc(currentUser.uid).collection('entries')
       .where('month','==',month).orderBy('createdAt','desc');
   }
   unsubscribe = q.onSnapshot(snap => {
@@ -73,9 +70,9 @@ function attachRealtimeListeners(isAdmin) {
 }
 
 function renderTable() {
-  const tbody = $('#urenTable tbody');
+  const tbody = document.querySelector('#urenTable tbody');
   tbody.innerHTML = '';
-  const whoFilter = $('#filterWie').value;
+  const whoFilter = document.getElementById('filterWie').value;
   let total = 0;
   allRows.forEach((r)=>{
     if (whoFilter && r.voorWie !== whoFilter) return;
@@ -95,74 +92,73 @@ function renderTable() {
     tbody.appendChild(tr);
     total += r.uren||0;
   });
-  $('#totals').textContent = 'Totaal: ' + (Math.round(total*100)/100) + ' uur';
+  document.getElementById('totals').textContent = 'Totaal: ' + (Math.round(total*100)/100) + ' uur';
 
-  // bind actions
-  $$('#urenTable .del').forEach(btn => btn.onclick = async (e)=>{
+  document.querySelectorAll('#urenTable .del').forEach(btn => btn.onclick = async (e)=>{
     const {id, uid} = e.target.dataset;
-    const ref = db.collection('users').doc(uid).collection('entries').doc(id);
+    const ref = db().collection('users').doc(uid).collection('entries').doc(id);
     if (!confirm('Weet je zeker dat je deze regel wilt verwijderen?')) return;
     await ref.delete();
   });
-  $$('#urenTable .approve').forEach(ch => ch.onchange = async (e)=>{
+  document.querySelectorAll('#urenTable .approve').forEach(ch => ch.onchange = async (e)=>{
     const {id, uid} = e.target.dataset;
-    const ref = db.collection('users').doc(uid).collection('entries').doc(id);
+    const ref = db().collection('users').doc(uid).collection('entries').doc(id);
     await ref.update({ goedgekeurd: e.target.checked });
   });
 }
 
-// submit new entry
-$('#hours-form').addEventListener('submit', async (e)=>{
+document.getElementById('hours-form')?.addEventListener('submit', async (e)=>{
   e.preventDefault();
   const row = {
-    voorWie: $('#voorWie').value,
-    datum: $('#datum').value,
-    month: byMonth($('#datum').value),
-    starttijd: $('#starttijd').value,
-    eindtijd: $('#eindtijd').value,
-    pauze: $('#pauze').value || '0',
-    opmerkingen: $('#opmerkingen').value,
+    voorWie: document.getElementById('voorWie').value,
+    datum: document.getElementById('datum').value,
+    month: (document.getElementById('datum').value||'').slice(0,7),
+    starttijd: document.getElementById('starttijd').value,
+    eindtijd: document.getElementById('eindtijd').value,
+    pauze: document.getElementById('pauze').value || '0',
+    opmerkingen: document.getElementById('opmerkingen').value,
   };
   row.uren = calcHours(row.starttijd, row.eindtijd, row.pauze);
   row.goedgekeurd = false;
-  row.email = currentUser.email;
+  row.email = (currentUser||{}).email;
   row.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-  await db.collection('users').doc(currentUser.uid).collection('entries').add(row);
+  await db().collection('users').doc(currentUser.uid).collection('entries').add(row);
   e.target.reset();
-  $('#pauze').value = '0';
+  document.getElementById('pauze').value = '0';
 });
 
-$('#reset').onclick = ()=>{ $('#hours-form').reset(); $('#pauze').value='0'; };
-$('#filterWie').onchange = renderTable;
-$('#filterMaand').onchange = ()=> attachRealtimeListeners($('#adminToggle').checked);
-$('#exportCsv').onclick = ()=>{
+document.getElementById('reset')?.addEventListener('click', ()=>{ 
+  document.getElementById('hours-form').reset(); 
+  document.getElementById('pauze').value='0'; 
+});
+document.getElementById('filterWie')?.addEventListener('change', renderTable);
+document.getElementById('filterMaand')?.addEventListener('change', ()=> attachRealtimeListeners(document.getElementById('adminToggle').checked));
+document.getElementById('exportCsv')?.addEventListener('click', ()=>{
   const rows = [['Medewerker','Voor wie','Datum','Start','Eind','Pauze','Uren','Opmerkingen','Goedgekeurd']];
   allRows.forEach(r => rows.push([r.email||r.uid,r.voorWie,fmtDate(r.datum),r.starttijd,r.eindtijd,r.pauze,r.uren,(r.opmerkingen||'').replace(/\n/g,' '), r.goedgekeurd?'JA':'NEE']));
   const csv = rows.map(r => r.map(v => '"'+String(v).replaceAll('"','""')+'"').join(',')).join('\n');
   const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
   const url = URL.createObjectURL(blob); const a = document.createElement('a');
   a.href=url; a.download='urenexport.csv'; a.click(); URL.revokeObjectURL(url);
-};
+});
 
-// Admin toggle (client-side guard; access is enforced by Firestore Rules)
-$('#adminToggle').onchange = ()=> attachRealtimeListeners($('#adminToggle').checked);
+document.getElementById('adminToggle')?.addEventListener('change', ()=> attachRealtimeListeners(document.getElementById('adminToggle').checked));
 
-// -------- Auth state --------
-auth.onAuthStateChanged(async (user)=>{
+firebase.auth().onAuthStateChanged(async (user)=>{
   if (user) {
     currentUser = user;
-    // fetch role from /users/{uid}
-    const prof = await db.collection('users').doc(user.uid).get();
+    const prof = await db().collection('users').doc(user.uid).get();
     const role = prof.exists ? (prof.data().role||'user') : 'user';
-    $('#who').textContent = user.email;
-    $('#role').textContent = role;
-    $('#role').style.display = 'inline-block';
+    document.getElementById('who').textContent = user.email;
+    document.getElementById('role').textContent = role;
+    document.getElementById('role').style.display = 'inline-block';
     authView.classList.add('hidden');
     appView.classList.remove('hidden');
-    const today = new Date(); $('#datum').valueAsDate = today; $('#filterMaand').value = today.toISOString().slice(0,7);
-    // admin switch only enabled if role === 'admin'
-    $('#adminToggle').disabled = role !== 'admin';
-    $('#adminToggle').checked = role === 'admin';
+    const today = new Date(); 
+    document.getElementById('datum').valueAsDate = today; 
+    document.getElementById('filterMaand').value = today.toISOString().slice(0,7);
+    document.getElementById('adminToggle').disabled = role !== 'admin';
+    document.getElementById('adminToggle').checked = role === 'admin';
     attachRealtimeListeners(role==='admin');
   } else {
     currentUser = null;

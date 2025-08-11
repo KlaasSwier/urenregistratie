@@ -126,12 +126,14 @@
     <small>© <span id="year"></span> Klaas Swier B.V. – interne tool</small>
   </footer>
 
-  <!-- Firebase SDKs (compat) -->
+  <!-- Firebase v10 compat (load BEFORE config & app) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-  <!-- Config (jij invullen) -->
+
+  <!-- Your config: defines window.auth and window.db -->
   <script src="firebase-config.js"></script>
+  <!-- App uses window.auth and window.db -->
   <script src="app.js"></script>
 </body>
 </html>

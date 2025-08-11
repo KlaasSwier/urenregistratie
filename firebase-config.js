@@ -1,18 +1,17 @@
-// firebase-config.js
-
-// Config van Firebase project
+// firebase-config.js — COMPAT variant (past bij jouw index.html)
 const firebaseConfig = {
-  apiKey: "JOUW_API_KEY",
+  apiKey: "AIzaSyDB6NKdIHJXytHom97eEpPE3KGdTXFFggE",
   authDomain: "urenregistratie-9c74b.firebaseapp.com",
   projectId: "urenregistratie-9c74b",
-  storageBucket: "urenregistratie-9c74b.appspot.com",
-  messagingSenderId: "JOUW_MESSAGING_SENDER_ID",
-  appId: "JOUW_APP_ID"
+  storageBucket: "urenregistratie-9c74b.appspot.com", // dit domein gebruiken
+  messagingSenderId: "868310860901",
+  appId: "1:868310860901:web:a72e3afd0ef7e2c48728c",
+  // measurementId is optioneel
 };
 
-// Firebase initialiseren
+// Init met compat SDK
 firebase.initializeApp(firebaseConfig);
 
-// Auth en Database globaal maken
+// Maak ze globaal zodat app.js ze kan gebruiken
 window.auth = firebase.auth();
-window.db = firebase.firestore();
+window.db   = firebase.firestore();
