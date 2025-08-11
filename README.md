@@ -1,24 +1,19 @@
-# Urenregistratie (statistische webapp)
+# Urenregistratie – Firebase versie
 
-Een simpele, mobiele webapp om uren te registreren. Werkt als statische site (geen server nodig) en kan gratis op Vercel worden gehost.
+Inlog per medewerker (e-mail + wachtwoord), opslag in Firestore, en admin-overzicht.
 
-## Features
-- Voor wie: Klaas Swier jr of Klaas sr (uitklap)
-- Datum, starttijd, eindtijd, pauze, opmerkingen
-- Automatische urenberekening (incl. nachtdienst over middernacht)
-- Filter op persoon en maand
-- Totaal uren per filter
-- Goedkeuringsvinkje
-- Export naar CSV
-- Opslag in `localStorage` (per apparaat/browser)
+## Snel starten
+1. Ga naar https://console.firebase.google.com → **Create project**
+2. **Authentication** → **Sign-in method** → **Email/Password** = Enabled
+3. **Firestore Database** → Create (Production) → Region EU (`europe-west4`/`eur3`)
+4. **Project settings** → **Your apps** → **Web app** → pak de **config** en plak die in `firebase-config.js`
+5. **Firestore Rules** → vervang met de inhoud van `firestore.rules.txt` en **Publish**
+6. Deploy de map naar Vercel (static site).
 
-## Deploy op Vercel
-1. Upload deze map in een GitHub repository
-2. Import het project in Vercel als **Other / Static Site**
-3. Deploy – klaar! (geen build nodig)
+## Rollen
+- Nieuwe registraties krijgen standaard rol `user` (aangemaakt in `/users/{uid}` bij registratie).
+- Maak een admin door in Firestore bij `/users/{uid}` het veld `role: 'admin'` te zetten.
 
-## Eigen domein
-Koppel `uren.klaasswier.nl` als CNAME naar `cname.vercel-dns.com.` in je DNS. Voeg het subdomein toe in de Vercel Project Settings > Domains.
-
-## Ontwikkeling
-Geen build tooling vereist. De app bestaat uit `index.html`, `style.css` en `app.js`.
+## Datamodel
+- `/users/{uid}`: `{ email, role }`
+- `/users/{uid}/entries/{doc}`: `{ voorWie, datum, month, starttijd, eindtijd, pauze, uren, opmerkingen, goedgekeurd, email, createdAt }`
