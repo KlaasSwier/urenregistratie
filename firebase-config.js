@@ -1,6 +1,6 @@
 // firebase-config.js — COMPAT
 const firebaseConfig = {
-  apiKey: "AIzaSyDB6NKdIHJXytHom97eEpPE3KGdTXFFggE",
+  apiKey: "AIzaSyBE9_oNBQdjcNVqJgeEa_uOgm_zPvl2Z8o",
   authDomain: "urenregistratie-9c74b.firebaseapp.com",
   projectId: "urenregistratie-9c74b",
   storageBucket: "urenregistratie-9c74b.appspot.com",
