@@ -1,21 +1,14 @@
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+// firebase-config.js  (VUL HIERONDER JE EIGEN WAARDES IN)
 const firebaseConfig = {
-  apiKey: "AIzaSyDB6NKdlHJXytHom97eEpPE3KGdTXFFggE",
-  authDomain: "urenregistratie-9c74b.firebaseapp.com",
-  projectId: "urenregistratie-9c74b",
-  storageBucket: "urenregistratie-9c74b.firebasestorage.app",
-  messagingSenderId: "868310860901",
-  appId: "1:868310860901:web:7335478befbe541348728c",
-  measurementId: "G-5H8LF5F9FN"
+  apiKey: "JOUW_API_KEY",
+  authDomain: "JOUW_PROJECT_ID.firebaseapp.com",
+  projectId: "JOUW_PROJECT_ID",
+  storageBucket: "JOUW_PROJECT_ID.appspot.com",
+  messagingSenderId: "JOUW_MESSAGING_SENDER_ID",
+  appId: "JOUW_APP_ID"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+// Init Firebase + maak globale refs aan
+firebase.initializeApp(firebaseConfig);
+window.auth = firebase.auth();        // <— belangrijk: zet op window
+window.db   = firebase.firestore();   // <— belangrijk: zet op window
