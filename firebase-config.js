@@ -1,18 +1,12 @@
-// Vul hier je Firebase-config in via de Console (Project settings > General > Your apps)
-// Voorbeeld:
-// const firebaseConfig = { apiKey: "...", authDomain: "...", projectId: "...", storageBucket: "...", messagingSenderId: "...", appId: "..." };
-// firebase.initializeApp(firebaseConfig);
-// const auth = firebase.auth();
-// const db = firebase.firestore();
-
-// ---- PLAATS HIER JE EIGEN CONFIG ----
+// firebase-config.js
 const firebaseConfig = {
-  apiKey: "PASTE_HERE",
-  authDomain: "PASTE_HERE.firebaseapp.com",
-  projectId: "PASTE_HERE",
-  storageBucket: "PASTE_HERE.appspot.com",
-  messagingSenderId: "PASTE_HERE",
-  appId: "PASTE_HERE"
+  apiKey: "JOUW_API_KEY",
+  authDomain: "JOUW_PROJECT_ID.firebaseapp.com",
+  projectId: "JOUW_PROJECT_ID",
+  storageBucket: "JOUW_PROJECT_ID.appspot.com",
+  messagingSenderId: "JOUW_MESSAGING_SENDER_ID",
+  appId: "JOUW_APP_ID",
+  // measurementId mag ook erbij als Firebase het toont
 };
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
