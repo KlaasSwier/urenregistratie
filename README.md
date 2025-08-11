@@ -1,1 +1,0 @@
-Vul je Firebase config in in firebase-config.js. Upload alles naar GitHub en laat Vercel redeployen.

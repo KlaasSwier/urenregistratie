@@ -11,8 +11,6 @@
     <h1>Urenregistratie</h1>
     <p class="subtitle">Inloggen en uren registreren</p>
   </header>
-
-  <!-- AUTH SCREENS -->
   <main class="container" id="auth-view">
     <section class="card maxw">
       <h2>Inloggen</h2>
@@ -26,7 +24,6 @@
         <a href="#" id="forgot">Wachtwoord vergeten</a>
       </div>
     </section>
-
     <section class="card maxw hidden" id="register-card">
       <h2>Registreren</h2>
       <form id="register-form" class="grid">
@@ -37,27 +34,18 @@
       <div class="muted small"><a href="#" id="to-login">Terug naar inloggen</a></div>
     </section>
   </main>
-
-  <!-- APP -->
   <main class="container hidden" id="app-view">
     <section class="card">
       <div class="bar">
-        <div>
-          Ingelogd als: <strong id="who"></strong>
-          <span id="role" class="badge"></span>
-        </div>
-        <div class="tools">
-          <button id="logout">Uitloggen</button>
-        </div>
+        <div>Ingelogd als: <strong id="who"></strong> <span id="role" class="badge"></span></div>
+        <div class="tools"><button id="logout">Uitloggen</button></div>
       </div>
     </section>
-
     <section class="card">
       <h2>Nieuwe registratie</h2>
       <form id="hours-form">
         <div class="grid">
-          <label>
-            Voor wie
+          <label>Voor wie
             <select id="voorWie" required>
               <option value="">— kies —</option>
               <option value="Klaas Swier jr">Klaas Swier jr</option>
@@ -76,7 +64,6 @@
         </div>
       </form>
     </section>
-
     <section class="card">
       <div class="toolbar">
         <div class="filters">
@@ -88,52 +75,28 @@
             </select>
           </label>
           <label>Maand <input type="month" id="filterMaand" /></label>
-          <label class="small">
-            <input type="checkbox" id="adminToggle" />
-            Admin-overzicht (alle medewerkers)
-          </label>
+          <label class="small"><input type="checkbox" id="adminToggle" /> Admin-overzicht (alle medewerkers)</label>
         </div>
-        <div class="tools">
-          <button id="exportCsv" type="button">Exporteer CSV</button>
-        </div>
+        <div class="tools"><button id="exportCsv" type="button">Exporteer CSV</button></div>
       </div>
-
       <div class="totals" id="totals">Totaal: 0 uur</div>
-
       <div class="table-wrap">
         <table id="urenTable">
           <thead>
-            <tr>
-              <th>Medewerker</th>
-              <th>Voor wie</th>
-              <th>Datum</th>
-              <th>Start</th>
-              <th>Eind</th>
-              <th>Pauze</th>
-              <th>Uren</th>
-              <th>Opmerkingen</th>
-              <th>Akkoord</th>
-              <th></th>
-            </tr>
+            <tr><th>Medewerker</th><th>Voor wie</th><th>Datum</th><th>Start</th><th>Eind</th><th>Pauze</th><th>Uren</th><th>Opmerkingen</th><th>Akkoord</th><th></th></tr>
           </thead>
           <tbody></tbody>
         </table>
       </div>
     </section>
   </main>
-
   <footer class="container foot">
     <small>© <span id="year"></span> Klaas Swier B.V. – interne tool</small>
   </footer>
-
-  <!-- Firebase v10 compat (load BEFORE config & app) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-
-  <!-- Your config: defines window.auth and window.db -->
   <script src="firebase-config.js"></script>
-  <!-- App uses window.auth and window.db -->
   <script src="app.js"></script>
 </body>
 </html>

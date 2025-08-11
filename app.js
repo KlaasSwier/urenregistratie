@@ -1,7 +1,6 @@
 const $ = (q) => document.querySelector(q);
 const $$ = (q) => Array.from(document.querySelectorAll(q));
 const byMonth = (isoDate) => isoDate?.slice(0,7);
-
 function calcHours(start, end, pauze) {
   if (!start || !end) return 0;
   const [sh, sm] = start.split(':').map(Number);
@@ -11,23 +10,20 @@ function calcHours(start, end, pauze) {
   return Math.max(0, diff - (parseFloat(pauze)||0));
 }
 function fmtDate(d) { try { return new Date(d).toLocaleDateString('nl-NL'); } catch { return d; } }
-
 const auth = () => window.auth;
 const db   = () => window.db;
-
-const authView = $('#auth-view');
-const registerCard = $('#register-card');
-const appView = $('#app-view');
-$('#to-register')?.addEventListener('click',(e)=>{ e.preventDefault(); registerCard.classList.remove('hidden'); });
-$('#to-login')?.addEventListener('click',(e)=>{ e.preventDefault(); registerCard.classList.add('hidden'); });
-$('#forgot')?.addEventListener('click', async (e)=>{
+const authView = document.getElementById('auth-view');
+const registerCard = document.getElementById('register-card');
+const appView = document.getElementById('app-view');
+document.getElementById('to-register')?.addEventListener('click',(e)=>{ e.preventDefault(); registerCard.classList.remove('hidden'); });
+document.getElementById('to-login')?.addEventListener('click',(e)=>{ e.preventDefault(); registerCard.classList.add('hidden'); });
+document.getElementById('forgot')?.addEventListener('click', async (e)=>{
   e.preventDefault();
   const email = prompt('Vul je e-mailadres in voor reset-link:');
   if (!email) return;
   try { await auth().sendPasswordResetEmail(email); alert('Reset e-mail verstuurd.'); }
   catch(err){ alert(err.message); }
 });
-
 document.getElementById('login-form')?.addEventListener('submit', async (e)=>{
   e.preventDefault();
   const email = document.getElementById('login-email').value.trim();
@@ -48,11 +44,9 @@ document.getElementById('register-form')?.addEventListener('submit', async (e)=>
   } catch(err){ alert(err.message); }
 });
 document.getElementById('logout')?.addEventListener('click', ()=> auth().signOut());
-
 let unsubscribe = null;
 let currentUser = null;
 let allRows = [];
-
 function attachRealtimeListeners(isAdmin) {
   if (unsubscribe) { unsubscribe(); unsubscribe = null; }
   const month = document.getElementById('filterMaand').value;
@@ -68,7 +62,6 @@ function attachRealtimeListeners(isAdmin) {
     renderTable();
   });
 }
-
 function renderTable() {
   const tbody = document.querySelector('#urenTable tbody');
   tbody.innerHTML = '';
@@ -93,7 +86,6 @@ function renderTable() {
     total += r.uren||0;
   });
   document.getElementById('totals').textContent = 'Totaal: ' + (Math.round(total*100)/100) + ' uur';
-
   document.querySelectorAll('#urenTable .del').forEach(btn => btn.onclick = async (e)=>{
     const {id, uid} = e.target.dataset;
     const ref = db().collection('users').doc(uid).collection('entries').doc(id);
@@ -106,7 +98,6 @@ function renderTable() {
     await ref.update({ goedgekeurd: e.target.checked });
   });
 }
-
 document.getElementById('hours-form')?.addEventListener('submit', async (e)=>{
   e.preventDefault();
   const row = {
@@ -126,7 +117,6 @@ document.getElementById('hours-form')?.addEventListener('submit', async (e)=>{
   e.target.reset();
   document.getElementById('pauze').value = '0';
 });
-
 document.getElementById('reset')?.addEventListener('click', ()=>{ 
   document.getElementById('hours-form').reset(); 
   document.getElementById('pauze').value='0'; 
@@ -141,9 +131,7 @@ document.getElementById('exportCsv')?.addEventListener('click', ()=>{
   const url = URL.createObjectURL(blob); const a = document.createElement('a');
   a.href=url; a.download='urenexport.csv'; a.click(); URL.revokeObjectURL(url);
 });
-
 document.getElementById('adminToggle')?.addEventListener('change', ()=> attachRealtimeListeners(document.getElementById('adminToggle').checked));
-
 firebase.auth().onAuthStateChanged(async (user)=>{
   if (user) {
     currentUser = user;
@@ -166,5 +154,4 @@ firebase.auth().onAuthStateChanged(async (user)=>{
     authView.classList.remove('hidden');
   }
 });
-
 document.getElementById('year').textContent = new Date().getFullYear();
