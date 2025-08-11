@@ -1,14 +1,18 @@
-// firebase-config.js  (VUL HIERONDER JE EIGEN WAARDES IN)
+// firebase-config.js
+
+// Config van Firebase project
 const firebaseConfig = {
   apiKey: "JOUW_API_KEY",
-  authDomain: "JOUW_PROJECT_ID.firebaseapp.com",
-  projectId: "JOUW_PROJECT_ID",
-  storageBucket: "JOUW_PROJECT_ID.appspot.com",
+  authDomain: "urenregistratie-9c74b.firebaseapp.com",
+  projectId: "urenregistratie-9c74b",
+  storageBucket: "urenregistratie-9c74b.appspot.com",
   messagingSenderId: "JOUW_MESSAGING_SENDER_ID",
   appId: "JOUW_APP_ID"
 };
 
-// Init Firebase + maak globale refs aan
+// Firebase initialiseren
 firebase.initializeApp(firebaseConfig);
-window.auth = firebase.auth();        // <— belangrijk: zet op window
-window.db   = firebase.firestore();   // <— belangrijk: zet op window
+
+// Auth en Database globaal maken
+window.auth = firebase.auth();
+window.db = firebase.firestore();
