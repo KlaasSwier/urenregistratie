@@ -46,6 +46,7 @@ document.getElementById('register-form')?.addEventListener('submit', async (e)=>
 document.getElementById('logout')?.addEventListener('click', ()=> auth().signOut());
 let unsubscribe = null;
 let currentUser = null;
+let isAdmin = false;
 let allRows = [];
 function attachRealtimeListeners(isAdmin) {
   if (unsubscribe) { unsubscribe(); unsubscribe = null; }
@@ -79,7 +80,12 @@ function renderTable() {
       <td>${r.pauze}</td>
       <td><span class="badge">${(r.uren||0).toFixed(2)}</span></td>
       <td>${r.opmerkingen||''}</td>
-      <td><input type="checkbox" ${r.goedgekeurd?'checked':''} data-id="${r.id}" data-uid="${r.uid}" class="approve"></td>
+      <td>${
+  isAdmin
+    ? `<input type="checkbox" ${r.goedgekeurd ? 'checked' : ''} data-id="${r.id}" data-uid="${r.uid}" class="approve">`
+    : (r.goedgekeurd ? 'JA' : 'NEE')
+}</td>
+
       <td><button class="danger del" data-id="${r.id}" data-uid="${r.uid}">Verwijder</button></td>
     `;
     tbody.appendChild(tr);
@@ -92,11 +98,14 @@ function renderTable() {
     if (!confirm('Weet je zeker dat je deze regel wilt verwijderen?')) return;
     await ref.delete();
   });
+  if (isAdmin) {
   document.querySelectorAll('#urenTable .approve').forEach(ch => ch.onchange = async (e)=>{
     const {id, uid} = e.target.dataset;
     const ref = db().collection('users').doc(uid).collection('entries').doc(id);
     await ref.update({ goedgekeurd: e.target.checked });
   });
+}
+
 }
 document.getElementById('hours-form')?.addEventListener('submit', async (e)=>{
   e.preventDefault();
@@ -137,6 +146,7 @@ firebase.auth().onAuthStateChanged(async (user)=>{
     currentUser = user;
     const prof = await db().collection('users').doc(user.uid).get();
     const role = prof.exists ? (prof.data().role||'user') : 'user';
+    isAdmin = (role === 'admin');
     document.getElementById('who').textContent = user.email;
     document.getElementById('role').textContent = role;
     document.getElementById('role').style.display = 'inline-block';
