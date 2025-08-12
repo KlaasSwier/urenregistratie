@@ -68,8 +68,10 @@ function renderTable() {
   tbody.innerHTML = '';
   const whoFilter = document.getElementById('filterWie').value;
   let total = 0;
+
   allRows.forEach((r)=>{
     if (whoFilter && r.voorWie !== whoFilter) return;
+
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${r.email || r.uid}</td>
@@ -81,31 +83,40 @@ function renderTable() {
       <td><span class="badge">${(r.uren||0).toFixed(2)}</span></td>
       <td>${r.opmerkingen||''}</td>
       <td>${
-  isAdmin
-    ? `<input type="checkbox" ${r.goedgekeurd ? 'checked' : ''} data-id="${r.id}" data-uid="${r.uid}" class="approve">`
-    : (r.goedgekeurd ? 'JA' : 'NEE')
-}</td>
-
-      <td><button class="danger del" data-id="${r.id}" data-uid="${r.uid}">Verwijder</button></td>
+        isAdmin
+          ? `<input type="checkbox" ${r.goedgekeurd ? 'checked' : ''} data-id="${r.id}" data-uid="${r.uid}" class="approve">`
+          : (r.goedgekeurd ? 'JA' : 'NEE')
+      }</td>
+      <td>${
+        isAdmin || r.uid === (currentUser?.uid || '')
+          ? `<button class="danger del" data-id="${r.id}" data-uid="${r.uid}">Verwijder</button>`
+          : ''
+      }</td>
     `;
     tbody.appendChild(tr);
     total += r.uren||0;
   });
-  document.getElementById('totals').textContent = 'Totaal: ' + (Math.round(total*100)/100) + ' uur';
+
+  document.getElementById('totals').textContent =
+    'Totaal: ' + (Math.round(total*100)/100) + ' uur';
+
+  // Verwijderen: admin of eigenaar
   document.querySelectorAll('#urenTable .del').forEach(btn => btn.onclick = async (e)=>{
     const {id, uid} = e.target.dataset;
     const ref = db().collection('users').doc(uid).collection('entries').doc(id);
     if (!confirm('Weet je zeker dat je deze regel wilt verwijderen?')) return;
-    await ref.delete();
+    try { await ref.delete(); } catch(err){ console.error(err); alert(err.message); }
   });
-  if (isAdmin) {
-  document.querySelectorAll('#urenTable .approve').forEach(ch => ch.onchange = async (e)=>{
-    const {id, uid} = e.target.dataset;
-    const ref = db().collection('users').doc(uid).collection('entries').doc(id);
-    await ref.update({ goedgekeurd: e.target.checked });
-  });
-}
 
+  // Akkoord: alleen admin krijgt een listener
+  if (isAdmin) {
+    document.querySelectorAll('#urenTable .approve').forEach(ch => ch.onchange = async (e)=>{
+      const {id, uid} = e.target.dataset;
+      const ref = db().collection('users').doc(uid).collection('entries').doc(id);
+      try { await ref.update({ goedgekeurd: e.target.checked }); }
+      catch(err){ console.error(err); alert('Updaten mislukt: ' + err.message); }
+    });
+  }
 }
 document.getElementById('hours-form')?.addEventListener('submit', async (e)=>{
   e.preventDefault();
@@ -131,7 +142,10 @@ document.getElementById('reset')?.addEventListener('click', ()=>{
   document.getElementById('pauze').value='0'; 
 });
 document.getElementById('filterWie')?.addEventListener('change', renderTable);
-document.getElementById('filterMaand')?.addEventListener('change', ()=> attachRealtimeListeners(document.getElementById('adminToggle').checked));
+document.getElementById('filterMaand')?.addEventListener('change', () => {
+  const adminView = isAdmin && document.getElementById('adminToggle').checked;
+  attachRealtimeListeners(adminView);
+});
 document.getElementById('exportCsv')?.addEventListener('click', ()=>{
   const rows = [['Medewerker','Voor wie','Datum','Start','Eind','Pauze','Uren','Opmerkingen','Goedgekeurd']];
   allRows.forEach(r => rows.push([r.email||r.uid,r.voorWie,fmtDate(r.datum),r.starttijd,r.eindtijd,r.pauze,r.uren,(r.opmerkingen||'').replace(/\n/g,' '), r.goedgekeurd?'JA':'NEE']));
@@ -140,7 +154,10 @@ document.getElementById('exportCsv')?.addEventListener('click', ()=>{
   const url = URL.createObjectURL(blob); const a = document.createElement('a');
   a.href=url; a.download='urenexport.csv'; a.click(); URL.revokeObjectURL(url);
 });
-document.getElementById('adminToggle')?.addEventListener('change', ()=> attachRealtimeListeners(document.getElementById('adminToggle').checked));
+document.getElementById('adminToggle')?.addEventListener('change', () => {
+  const adminView = isAdmin && document.getElementById('adminToggle').checked;
+  attachRealtimeListeners(adminView);
+});
 firebase.auth().onAuthStateChanged(async (user)=>{
   if (user) {
     currentUser = user;
@@ -155,9 +172,12 @@ firebase.auth().onAuthStateChanged(async (user)=>{
     const today = new Date(); 
     document.getElementById('datum').valueAsDate = today; 
     document.getElementById('filterMaand').value = today.toISOString().slice(0,7);
-    document.getElementById('adminToggle').disabled = role !== 'admin';
-    document.getElementById('adminToggle').checked = role === 'admin';
-    attachRealtimeListeners(role==='admin');
+    isAdmin = (role === 'admin');
+
+    document.getElementById('adminToggle').disabled = !isAdmin;
+    document.getElementById('adminToggle').checked  = isAdmin;
+    attachRealtimeListeners(isAdmin);
+
   } else {
     currentUser = null;
     appView.classList.add('hidden');
