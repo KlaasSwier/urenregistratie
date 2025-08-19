@@ -35,10 +35,10 @@ body{
 }
 .brand{ display:flex; align-items:center; gap:16px; }
 .logo{
-  height:56px; width:auto; object-fit:contain;
+  height:90px; width:auto; object-fit:contain;
   filter: drop-shadow(0 1px 1px rgba(0,0,0,.05));
 }
-.logo.right{ height:48px; }
+.logo.right{ height:90px; }
 .titles h1{ margin:0; font-size: 1.75rem; }
 .subtitle{ margin:4px 0 0; color: var(--muted); }
 
