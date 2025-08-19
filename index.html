@@ -13,7 +13,7 @@
     <p class="subtitle">Inloggen en uren registreren</p>
   </header>
 
-  <!-- AUTH VIEW -->
+  <!-- Alleen LOGIN -->
   <main class="container" id="auth-view">
     <section class="card maxw">
       <h2>Inloggen</h2>
@@ -27,36 +27,18 @@
         <button type="submit">Inloggen</button>
       </form>
       <div class="muted small">
-        Nog geen account? <a href="#" id="to-register">Registreren</a> ·
         <a href="#" id="forgot">Wachtwoord vergeten</a>
-      </div>
-    </section>
-
-    <section class="card maxw hidden" id="register-card">
-      <h2>Registreren</h2>
-      <form id="register-form" class="grid" novalidate>
-        <label>E-mailadres
-          <input id="reg-email" type="email" autocomplete="username" required />
-        </label>
-        <label>Wachtwoord
-          <input id="reg-pass" type="password" autocomplete="new-password" required minlength="6" />
-        </label>
-        <button type="submit">Account aanmaken</button>
-      </form>
-      <div class="muted small">
-        <a href="#" id="to-login">Terug naar inloggen</a>
       </div>
     </section>
   </main>
 
-  <!-- APP VIEW -->
+  <!-- APP pas zichtbaar na inloggen -->
   <main class="container hidden" id="app-view">
     <section class="card">
       <div class="bar">
         <div>Ingelogd als: <strong id="who"></strong> <span id="role" class="badge"></span></div>
         <div class="tools"><button id="logout">Uitloggen</button></div>
       </div>
-      <!-- Meldingsbalk (gevuld vanuit app.js → showMessage) -->
       <div id="message" class="hidden"></div>
     </section>
 
@@ -71,28 +53,12 @@
               <option value="Klaas sr">Klaas sr</option>
             </select>
           </label>
-
-          <label>Datum
-            <input id="datum" type="date" required />
-          </label>
-
-          <label>Starttijd
-            <input id="starttijd" type="time" inputmode="numeric" required />
-          </label>
-
-          <label>Eindtijd
-            <input id="eindtijd" type="time" inputmode="numeric" required />
-          </label>
-
-          <label>Pauze (uur)
-            <input id="pauze" type="number" step="0.25" min="0" value="0" />
-          </label>
-
-          <label>Opmerkingen
-            <textarea id="opmerkingen" rows="2" placeholder="optioneel"></textarea>
-          </label>
+          <label>Datum <input id="datum" type="date" required /></label>
+          <label>Starttijd <input id="starttijd" type="time" required /></label>
+          <label>Eindtijd <input id="eindtijd" type="time" required /></label>
+          <label>Pauze (uur) <input id="pauze" type="number" step="0.25" min="0" value="0" /></label>
+          <label>Opmerkingen <textarea id="opmerkingen" rows="2" placeholder="optioneel"></textarea></label>
         </div>
-
         <div class="actions">
           <button type="submit">Toevoegen</button>
           <button type="button" id="reset">Reset</button>
@@ -110,18 +76,8 @@
               <option value="Klaas sr">Klaas sr</option>
             </select>
           </label>
-
-          <label>Maand
-            <input type="month" id="filterMaand" />
-          </label>
-
-          <!-- Alleen UI: de echte rechten komen uit app.js (isAdmin) -->
-          <label class="small">
-            <input type="checkbox" id="adminToggle" />
-            Admin-overzicht (alle medewerkers)
-          </label>
-
-          <!-- Nieuw: medewerker-filter (alleen zichtbaar voor admin; app.js togglet de hidden class) -->
+          <label>Maand <input type="month" id="filterMaand" /></label>
+          <label class="small"><input type="checkbox" id="adminToggle" /> Admin-overzicht (alle medewerkers)</label>
           <label id="filterMedewerkerWrap" class="small hidden">
             Medewerker
             <select id="filterMedewerker">
@@ -129,29 +85,14 @@
             </select>
           </label>
         </div>
-
-        <div class="tools">
-          <button id="exportCsv" type="button">Exporteer CSV</button>
-        </div>
+        <div class="tools"><button id="exportCsv" type="button">Exporteer CSV</button></div>
       </div>
 
       <div class="totals" id="totals">Totaal: 0 uur</div>
-
       <div class="table-wrap">
         <table id="urenTable">
           <thead>
-            <tr>
-              <th>Medewerker</th>
-              <th>Voor wie</th>
-              <th>Datum</th>
-              <th>Start</th>
-              <th>Eind</th>
-              <th>Pauze</th>
-              <th>Uren</th>
-              <th>Opmerkingen</th>
-              <th>Akkoord</th>
-              <th></th>
-            </tr>
+            <tr><th>Medewerker</th><th>Voor wie</th><th>Datum</th><th>Start</th><th>Eind</th><th>Pauze</th><th>Uren</th><th>Opmerkingen</th><th>Akkoord</th><th></th></tr>
           </thead>
           <tbody></tbody>
         </table>
@@ -168,9 +109,8 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
-  <!-- Jouw config en app -->
+  <!-- Config + App -->
   <script src="firebase-config.js?v=2"></script>
   <script src="app.js?v=8"></script>
 </body>
 </html>
-
