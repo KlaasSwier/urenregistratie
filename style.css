@@ -1,6 +1,6 @@
 /* ====== Thema - Kleuren ====== */
 :root{
-  --bg:        #f6fbf8;         /* paginabackground */
+  --bg:        #afeeee;         /* paginabackground */
   --card:      #ffffff;         /* panel/card achtergrond */
   --text:      #0c1a12;         /* basistekst */
   --muted:     #5f776b;         /* subtiele tekst */
@@ -24,7 +24,7 @@ body{
 
 /* Containers */
 .container{
-  max-width: 1050px;
+  max-width: 1200px;
   margin: 24px auto;
   padding: 0 16px;
 }
