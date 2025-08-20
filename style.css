@@ -1,11 +1,11 @@
 /* ====== Thema - Kleuren ====== */
 :root{
-  --bg:        #90ee90;         /* paginabackground */
+  --bg:        #dee8c8;         /* paginabackground */
   --card:      #ffffff;         /* panel/card achtergrond */
   --text:      #0c1a12;         /* basistekst */
   --muted:     #5f776b;         /* subtiele tekst */
   --border:    #e6efe9;         /* randen */
-  --primary:   #2e7d32;         /* knoppen/links (groen) */
+  --primary:   #4c4f41;         /* knoppen/links (groen) */
   --primary-2: #256b2a;         /* hover */
   --accent:    #00a676;         /* badges/kleine accenten */
   --danger:    #d93025;

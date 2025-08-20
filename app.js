@@ -1,5 +1,5 @@
 /********************
- *  Urenregistratie - app.js (compleet)
+ *  Urenregistratie - app.js (compleet, met admin medewerker-filter)
  ********************/
 
 /* ===== Helpers ===== */
@@ -61,6 +61,28 @@ async function loadUserProfiles() {
   } catch (e) {
     console.error('loadUserProfiles failed', e);
   }
+}
+
+/* Admin medewerker-filter vullen */
+function populateMedewerkerFilter() {
+  const wrap = document.getElementById('filterMedewerkerWrap');
+  const sel  = document.getElementById('filterMedewerker');
+  if (!wrap || !sel) return;
+
+  if (!isAdmin) { // niet-admins zien het filter niet
+    wrap.classList.add('hidden');
+    sel.innerHTML = '<option value="">Alle</option>';
+    return;
+  }
+
+  const entries = Object.entries(userMap)
+    .map(([uid, u]) => ({ uid, label: (u.naam || u.email || uid) }))
+    .sort((a,b)=> a.label.localeCompare(b.label, 'nl', {sensitivity:'base'}));
+
+  sel.innerHTML = '<option value="">Alle</option>' +
+    entries.map(u => `<option value="${u.uid}">${u.label}</option>`).join('');
+
+  wrap.classList.remove('hidden');
 }
 
 /* ===== Login / Forgot / Logout ===== */
@@ -129,10 +151,12 @@ function renderTable() {
   tbody.innerHTML = '';
 
   const whoFilter = $('#filterWie')?.value || '';
+  const medewerkerFilterUid = document.getElementById('filterMedewerker')?.value || '';
   let total = 0;
 
   allRows.forEach((r) => {
     if (whoFilter && r.voorWie !== whoFilter) return;
+    if (isAdmin && medewerkerFilterUid && r.uid !== medewerkerFilterUid) return;
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
@@ -252,25 +276,35 @@ $('#adminToggle')?.addEventListener('change', () => {
   attachRealtimeListeners(useAdminView);
 });
 
+document.getElementById('filterMedewerker')?.addEventListener('change', renderTable);
+
 $('#exportCsv')?.addEventListener('click', () => {
   const rows = [[
     'Medewerker','Voor wie','Datum','Start','Eind',
     'Pauze','Wachturen','Rusturen','Uren','Opmerkingen','Goedgekeurd'
   ]];
 
-  allRows.forEach(r => rows.push([
-    getDisplayName(r.uid, r.email),
-    r.voorWie || '',
-    fmtDate(r.datum),
-    r.starttijd || '',
-    r.eindtijd || '',
-    r.pauze || '0',
-    r.wachturen || 0,
-    r.rusturen || 0,
-    r.uren || 0,
-    (r.opmerkingen || '').replace(/\n/g, ' '),
-    r.goedgekeurd ? 'JA' : 'NEE'
-  ]));
+  const whoFilter = $('#filterWie')?.value || '';
+  const medewerkerFilterUid = document.getElementById('filterMedewerker')?.value || '';
+
+  allRows.forEach(r => {
+    if (whoFilter && r.voorWie !== whoFilter) return;
+    if (isAdmin && medewerkerFilterUid && r.uid !== medewerkerFilterUid) return;
+
+    rows.push([
+      getDisplayName(r.uid, r.email),
+      r.voorWie || '',
+      fmtDate(r.datum),
+      r.starttijd || '',
+      r.eindtijd || '',
+      r.pauze || '0',
+      r.wachturen || 0,
+      r.rusturen || 0,
+      r.uren || 0,
+      (r.opmerkingen || '').replace(/\n/g, ' '),
+      r.goedgekeurd ? 'JA' : 'NEE'
+    ]);
+  });
 
   const csv  = rows.map(r => r.map(v => `"${String(v).replaceAll('"','""')}"`).join(',')).join('\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -295,8 +329,9 @@ firebase.auth().onAuthStateChanged(async (user) => {
     }
     isAdmin = (role === 'admin');
 
-    // Profielen/namen inladen voor weergave
+    // Profielen/namen inladen voor weergave + filter vullen
     await loadUserProfiles();
+    populateMedewerkerFilter();
 
     // UI
     $('#who').textContent  = getDisplayName(user.uid, user.email);
