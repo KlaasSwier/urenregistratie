@@ -1,5 +1,6 @@
 /********************
- *  Urenregistratie - app.js (compleet, met admin medewerker-filter)
+ *  Urenregistratie
+ *  Volledige app.js met admin-filter
  ********************/
 
 /* ===== Helpers ===== */
@@ -11,13 +12,17 @@ function calcHours(start, end, pauze, wachturen, rusturen) {
   if (!start || !end) return 0;
   const [sh, sm] = start.split(':').map(Number);
   const [eh, em] = end.split(':').map(Number);
-  let s = sh + sm/60, e = eh + em/60, diff = e - s;
-  if (diff < 0) diff += 24; // over middernacht
-  return Math.max(0,
+  let s = sh + sm / 60,
+      e = eh + em / 60,
+      diff = e - s;
+  if (diff < 0) diff += 24;
+
+  return Math.max(
+    0,
     diff
-    - (parseFloat(pauze)     || 0)
-    - (parseFloat(wachturen) || 0)
-    - (parseFloat(rusturen)  || 0)
+      - (parseFloat(pauze) || 0)
+      - (parseFloat(wachturen) || 0)
+      - (parseFloat(rusturen) || 0)
   );
 }
 
@@ -26,66 +31,25 @@ function fmtDate(d) {
   catch { return d; }
 }
 
-/* Firebase wrappers (compat) – worden in firebase-config.js geïnitialiseerd */
+/* Firebase wrappers */
 const auth = () => window.auth || firebase.auth();
 const db   = () => window.db   || firebase.firestore();
 
 /* DOM refs */
 const authView = $('#auth-view');
-const appView  = $('#app-view');
-
-/* ===== Globale staat ===== */
-let currentUser  = null;
-let isAdmin      = false;
-let unsubscribe  = null;
-let allRows      = [];          // records voor de tabel
-let userMap      = {};          // uid -> { email, naam, ... }
-
-/* ===== Naam-weergave ===== */
-function getDisplayName(uid, fallbackEmail) {
-  if (userMap[uid]?.naam) return userMap[uid].naam;
-  return userMap[uid]?.email || fallbackEmail || uid;
-}
-
-/* Profielen (namen/emails) ophalen */
-async function loadUserProfiles() {
-  try {
-    if (isAdmin) {
-      const snap = await db().collection('users').get();
-      userMap = {};
-      snap.forEach(d => userMap[d.id] = d.data() || {});
-    } else if (currentUser?.uid) {
-      const d = await db().collection('users').doc(currentUser.uid).get();
-      userMap = { [currentUser.uid]: d.exists ? (d.data() || {}) : { email: currentUser.email } };
-    }
-  } catch (e) {
-    console.error('loadUserProfiles failed', e);
-  }
-}
-
-/* Admin medewerker-filter vullen */
-function populateMedewerkerFilter() {
-  const wrap = document.getElementById('filterMedewerkerWrap');
-  const sel  = document.getElementById('filterMedewerker');
-  if (!wrap || !sel) return;
-
-  if (!isAdmin) { // niet-admins zien het filter niet
-    wrap.classList.add('hidden');
-    sel.innerHTML = '<option value="">Alle</option>';
-    return;
-  }
-
-  const entries = Object.entries(userMap)
-    .map(([uid, u]) => ({ uid, label: (u.naam || u.email || uid) }))
-    .sort((a,b)=> a.label.localeCompare(b.label, 'nl', {sensitivity:'base'}));
-
-  sel.innerHTML = '<option value="">Alle</option>' +
-    entries.map(u => `<option value="${u.uid}">${u.label}</option>`).join('');
-
-  wrap.classList.remove('hidden');
-}
+const registerCard = $('#register-card');
+const appView = $('#app-view');
 
 /* ===== Login / Forgot / Logout ===== */
+$('#to-register')?.addEventListener('click', (e) => {
+  e.preventDefault();
+  registerCard?.classList.remove('hidden');
+});
+$('#to-login')?.addEventListener('click', (e) => {
+  e.preventDefault();
+  registerCard?.classList.add('hidden');
+});
+
 $('#forgot')?.addEventListener('click', async (e) => {
   e.preventDefault();
   const email = prompt('Vul je e-mailadres in voor de reset-link:');
@@ -109,22 +73,43 @@ $('#login-form')?.addEventListener('submit', async (e) => {
   }
 });
 
-$('#logout')?.addEventListener('click', () => auth().signOut());
+$('#logout')?.addEventListener('click', () => {
+  safeUnsubscribe();
+  auth().signOut();
+});
 
-/* ===== Realtime listeners (eigen vs admin-overzicht) ===== */
+/* ===== Globale staat ===== */
+let currentUser = null;
+let isAdmin = false;
+let allRows = [];
+let userMap = {};
+
+let unsubscribe = null;
+function safeUnsubscribe() {
+  if (unsubscribe) {
+    try { unsubscribe(); } catch (e) {}
+  }
+  unsubscribe = null;
+}
+
+// Display name
+function getDisplayName(uid, fallbackEmail) {
+  if (userMap[uid] && userMap[uid].naam) return userMap[uid].naam;
+  return userMap[uid]?.email || fallbackEmail || uid;
+}
+
+/* ===== Realtime listeners ===== */
 function attachRealtimeListeners(useAdminView) {
-  if (unsubscribe) { unsubscribe(); unsubscribe = null; }
+  safeUnsubscribe();
 
   const month = $('#filterMaand').value || new Date().toISOString().slice(0, 7);
-
   let q;
+
   if (useAdminView) {
-    // Admin: alle entries van alle users voor deze maand
     q = db().collectionGroup('entries')
       .where('month', '==', month)
       .orderBy('createdAt', 'desc');
   } else {
-    // User: alleen eigen entries
     q = db().collection('users')
       .doc(currentUser.uid)
       .collection('entries')
@@ -132,17 +117,21 @@ function attachRealtimeListeners(useAdminView) {
       .orderBy('createdAt', 'desc');
   }
 
-  unsubscribe = q.onSnapshot((snap) => {
-    allRows = snap.docs.map(d => ({
-      id : d.id,
-      uid: d.ref.parent.parent.id, // uid van eigenaar
-      ...d.data()
-    }));
-    renderTable();
-  }, (err) => {
-    console.error(err);
-    alert('Lezen mislukt: ' + err.message);
-  });
+  unsubscribe = q.onSnapshot(
+    (snap) => {
+      allRows = snap.docs.map((d) => ({
+        id: d.id,
+        uid: d.ref.parent.parent.id,
+        ...d.data(),
+      }));
+      renderTable();
+    },
+    (err) => {
+      if (!auth().currentUser || err?.code === 'permission-denied') return;
+      console.error(err);
+      alert('Lezen mislukt: ' + err.message);
+    }
+  );
 }
 
 /* ===== Tabel renderen ===== */
@@ -151,12 +140,12 @@ function renderTable() {
   tbody.innerHTML = '';
 
   const whoFilter = $('#filterWie')?.value || '';
-  const medewerkerFilterUid = document.getElementById('filterMedewerker')?.value || '';
+  const medewerkerFilter = $('#filterMedewerker')?.value || '';
   let total = 0;
 
   allRows.forEach((r) => {
     if (whoFilter && r.voorWie !== whoFilter) return;
-    if (isAdmin && medewerkerFilterUid && r.uid !== medewerkerFilterUid) return;
+    if (medewerkerFilter && getDisplayName(r.uid, r.email) !== medewerkerFilter) return;
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
@@ -187,30 +176,40 @@ function renderTable() {
 
   $('#totals').textContent = 'Totaal: ' + (Math.round(total * 100) / 100) + ' uur';
 
-  // Verwijderen (admin of eigenaar)
-  $$('#urenTable .del').forEach(btn => btn.onclick = async (e) => {
+  // Delete
+  $$('#urenTable .del').forEach((btn) => (btn.onclick = async (e) => {
     const { id, uid } = e.target.dataset;
     const ref = db().collection('users').doc(uid).collection('entries').doc(id);
     if (!confirm('Weet je zeker dat je deze regel wilt verwijderen?')) return;
     try { await ref.delete(); }
     catch (err) { console.error(err); alert('Verwijderen mislukt: ' + err.message); }
-  });
+  }));
 
-  // Akkoord (alleen admin)
+  // Approve
   if (isAdmin) {
-    $$('#urenTable .approve').forEach(ch => ch.onchange = async (e) => {
+    $$('#urenTable .approve').forEach((ch) => (ch.onchange = async (e) => {
       const { id, uid } = e.target.dataset;
       const ref = db().collection('users').doc(uid).collection('entries').doc(id);
       try { await ref.update({ goedgekeurd: e.target.checked }); }
       catch (err) { console.error(err); alert('Updaten mislukt: ' + err.message); }
-    });
+    }));
+  }
+
+  // Admin filter dropdown vullen met medewerkers
+  if (isAdmin) {
+    const select = $('#filterMedewerker');
+    if (select) {
+      const uniqueUsers = [...new Set(allRows.map(r => getDisplayName(r.uid, r.email)))];
+      select.innerHTML = '<option value="">Alle medewerkers</option>' + uniqueUsers.map(u => `<option value="${u}">${u}</option>`).join('');
+      if (medewerkerFilter) select.value = medewerkerFilter;
+    }
   }
 }
 
 /* ===== Uren toevoegen ===== */
 $('#hours-form')?.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const form = e.currentTarget; // <form>
+  const form = e.currentTarget;
 
   try {
     const dateVal = $('#datum').value;
@@ -223,7 +222,7 @@ $('#hours-form')?.addEventListener('submit', async (e) => {
       eindtijd   : $('#eindtijd').value,
       pauze      : $('#pauze').value || '0',
       wachturen  : $('#wachturen') ? $('#wachturen').value || '0' : '0',
-      rusturen   : $('#rusturen')  ? $('#rusturen').value  || '0' : '0',
+      rusturen   : $('#rusturen') ? $('#rusturen').value || '0' : '0',
       opmerkingen: $('#opmerkingen').value,
       email      : (currentUser || {}).email || '',
       goedgekeurd: false,
@@ -233,7 +232,6 @@ $('#hours-form')?.addEventListener('submit', async (e) => {
 
     await db().collection('users').doc(currentUser.uid).collection('entries').add(row);
 
-    // Filter automatisch naar de maand van de nieuwe regel
     const filter = $('#filterMaand');
     if (filter && filter.value !== row.month) {
       filter.value = row.month;
@@ -241,11 +239,8 @@ $('#hours-form')?.addEventListener('submit', async (e) => {
       attachRealtimeListeners(useAdminView);
     }
 
-    // Formulier veilig resetten + defaults
     if (form && typeof form.reset === 'function') form.reset();
-    if ($('#pauze'))     $('#pauze').value     = '0';
-    if ($('#wachturen')) $('#wachturen').value = '0';
-    if ($('#rusturen'))  $('#rusturen').value  = '0';
+    $('#pauze').value = '0';
 
     alert('Toegevoegd ✓');
   } catch (err) {
@@ -254,17 +249,16 @@ $('#hours-form')?.addEventListener('submit', async (e) => {
   }
 });
 
-/* Reset-knop */
+/* Reset */
 $('#reset')?.addEventListener('click', () => {
   const f = $('#hours-form');
   f?.reset();
-  if ($('#pauze'))     $('#pauze').value     = '0';
-  if ($('#wachturen')) $('#wachturen').value = '0';
-  if ($('#rusturen'))  $('#rusturen').value  = '0';
+  $('#pauze').value = '0';
 });
 
 /* ===== Filters / Export ===== */
 $('#filterWie')?.addEventListener('change', renderTable);
+$('#filterMedewerker')?.addEventListener('change', renderTable);
 
 $('#filterMaand')?.addEventListener('change', () => {
   const useAdminView = isAdmin && $('#adminToggle').checked;
@@ -276,21 +270,11 @@ $('#adminToggle')?.addEventListener('change', () => {
   attachRealtimeListeners(useAdminView);
 });
 
-document.getElementById('filterMedewerker')?.addEventListener('change', renderTable);
-
 $('#exportCsv')?.addEventListener('click', () => {
-  const rows = [[
-    'Medewerker','Voor wie','Datum','Start','Eind',
-    'Pauze','Wachturen','Rusturen','Uren','Opmerkingen','Goedgekeurd'
-  ]];
-
-  const whoFilter = $('#filterWie')?.value || '';
-  const medewerkerFilterUid = document.getElementById('filterMedewerker')?.value || '';
-
-  allRows.forEach(r => {
-    if (whoFilter && r.voorWie !== whoFilter) return;
-    if (isAdmin && medewerkerFilterUid && r.uid !== medewerkerFilterUid) return;
-
+  const rows = [
+    ['Medewerker', 'Voor wie', 'Datum', 'Start', 'Eind', 'Pauze', 'Wachturen', 'Rusturen', 'Uren', 'Opmerkingen', 'Goedgekeurd'],
+  ];
+  allRows.forEach((r) =>
     rows.push([
       getDisplayName(r.uid, r.email),
       r.voorWie || '',
@@ -302,15 +286,17 @@ $('#exportCsv')?.addEventListener('click', () => {
       r.rusturen || 0,
       r.uren || 0,
       (r.opmerkingen || '').replace(/\n/g, ' '),
-      r.goedgekeurd ? 'JA' : 'NEE'
-    ]);
-  });
+      r.goedgekeurd ? 'JA' : 'NEE',
+    ])
+  );
 
-  const csv  = rows.map(r => r.map(v => `"${String(v).replaceAll('"','""')}"`).join(',')).join('\n');
+  const csv = rows.map((r) => r.map((v) => `"${String(v).replaceAll('"', '""')}"`).join(',')).join('\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href = url; a.download = 'urenexport.csv'; a.click();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'urenexport.csv';
+  a.click();
   URL.revokeObjectURL(url);
 });
 
@@ -319,44 +305,38 @@ firebase.auth().onAuthStateChanged(async (user) => {
   if (user) {
     currentUser = user;
 
-    // Rol ophalen
     let role = 'user';
     try {
       const prof = await db().collection('users').doc(user.uid).get();
       role = prof.exists ? (prof.data().role || 'user') : 'user';
+      userMap[user.uid] = { email: user.email, ...prof.data() };
     } catch (e) {
       console.warn('Kon profiel niet lezen, ga uit van user', e);
     }
-    isAdmin = (role === 'admin');
+    isAdmin = role === 'admin';
 
-    // Profielen/namen inladen voor weergave + filter vullen
-    await loadUserProfiles();
-    populateMedewerkerFilter();
-
-    // UI
-    $('#who').textContent  = getDisplayName(user.uid, user.email);
+    $('#who').textContent = getDisplayName(user.uid, user.email);
     $('#role').textContent = role;
     $('#role').style.display = 'inline-block';
 
     authView.classList.add('hidden');
     appView.classList.remove('hidden');
 
-    // Defaults (datum en maand)
     const today = new Date();
     $('#datum').valueAsDate = today;
     $('#filterMaand').value = today.toISOString().slice(0, 7);
 
-    // Admin toggle beschikbaar?
     $('#adminToggle').disabled = !isAdmin;
-    $('#adminToggle').checked  = isAdmin;
+    $('#adminToggle').checked = isAdmin;
 
     attachRealtimeListeners(isAdmin);
   } else {
+    safeUnsubscribe();
     currentUser = null;
     appView.classList.add('hidden');
     authView.classList.remove('hidden');
   }
 });
 
-/* Footer-jaar */
+/* Footer */
 $('#year').textContent = new Date().getFullYear();
