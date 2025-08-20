@@ -8,15 +8,17 @@ const $  = (q) => document.querySelector(q);
 const $$ = (q) => Array.from(document.querySelectorAll(q));
 const byMonth = (isoDate) => (isoDate || '').slice(0, 7);
 
-function calcHours(start, end, pauze) {
+function calcHours(start, end, pauze, wachturen, rusturen) {
   if (!start || !end) return 0;
   const [sh, sm] = start.split(':').map(Number);
   const [eh, em] = end.split(':').map(Number);
-  let s = sh + sm / 60;
-  let e = eh + em / 60;
-  let diff = e - s;
-  if (diff < 0) diff += 24;               // over middernacht
-  return Math.max(0, diff - (parseFloat(pauze) || 0));
+  let s = sh + sm/60, e = eh + em/60, diff = e - s;
+  if (diff < 0) diff += 24;
+
+  return Math.max(0, diff 
+    - (parseFloat(pauze) || 0) 
+    - (parseFloat(wachturen) || 0) 
+    - (parseFloat(rusturen) || 0));
 }
 
 function fmtDate(d) {
@@ -127,6 +129,8 @@ function renderTable() {
       <td>${r.starttijd || ''}</td>
       <td>${r.eindtijd || ''}</td>
       <td>${r.pauze || '0'}</td>
+      <td>${r.wachturen || 0}</td>
+      <td>${r.rusturen || 0}</td>
       <td><span class="badge">${(r.uren || 0).toFixed(2)}</span></td>
       <td>${(r.opmerkingen || '').replace(/\n/g, '<br>')}</td>
       <td>${
@@ -175,18 +179,20 @@ $('#hours-form')?.addEventListener('submit', async (e) => {
     const dateVal = $('#datum').value;
 
     const row = {
-      voorWie    : $('#voorWie').value,
-      datum      : dateVal,
-      month      : byMonth(dateVal),
-      starttijd  : $('#starttijd').value,
-      eindtijd   : $('#eindtijd').value,
-      pauze      : $('#pauze').value || '0',
-      opmerkingen: $('#opmerkingen').value,
-      email      : (currentUser || {}).email || '',
-      goedgekeurd: false,
-      createdAt  : firebase.firestore.FieldValue.serverTimestamp(),
-    };
-    row.uren = calcHours(row.starttijd, row.eindtijd, row.pauze);
+  voorWie    : $('#voorWie').value,
+  datum      : dateVal,
+  month      : byMonth(dateVal),
+  starttijd  : $('#starttijd').value,
+  eindtijd   : $('#eindtijd').value,
+  pauze      : $('#pauze').value || '0',
+  wachturen  : $('#wachturen') ? $('#wachturen').value || '0' : '0',
+  rusturen   : $('#rusturen') ? $('#rusturen').value || '0' : '0',
+  opmerkingen: $('#opmerkingen').value,
+  email      : (currentUser || {}).email || '',
+  goedgekeurd: false,
+  createdAt  : firebase.firestore.FieldValue.serverTimestamp(),
+};
+    row.uren = calcHours(row.starttijd, row.eindtijd, row.pauze, row.wachturen, row.rusturen);
 
     await db().collection('users').doc(currentUser.uid).collection('entries').add(row);
 
@@ -230,7 +236,7 @@ $('#adminToggle')?.addEventListener('change', () => {
 });
 
 $('#exportCsv')?.addEventListener('click', () => {
-  const rows = [['Medewerker', 'Voor wie', 'Datum', 'Start', 'Eind', 'Pauze', 'Uren', 'Opmerkingen', 'Goedgekeurd']];
+  const rows = [['Medewerker', 'Voor wie', 'Datum', 'Start', 'Eind', 'Pauze', 'Wachturen', 'Rusturen', 'Uren', 'Opmerkingen', 'Goedgekeurd']];
   allRows.forEach(r => rows.push([
     r.email || r.uid,
     r.voorWie || '',
@@ -238,6 +244,8 @@ $('#exportCsv')?.addEventListener('click', () => {
     r.starttijd || '',
     r.eindtijd || '',
     r.pauze || '0',
+    r.wachturen || 0,
+    r.rusturen || 0,
     r.uren || 0,
     (r.opmerkingen || '').replace(/\n/g, ' '),
     r.goedgekeurd ? 'JA' : 'NEE'
