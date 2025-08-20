@@ -29,7 +29,7 @@ body{
   padding: 0 16px;
 }
 
-/* Header met 2 logo’s */
+/* Header met 2 logo’s rechts */
 .header{
   display:flex; align-items:center; justify-content:space-between;
 }
