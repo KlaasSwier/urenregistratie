@@ -1,6 +1,5 @@
 /********************
- *  Urenregistratie
- *  Volledige app.js
+ *  Urenregistratie - app.js (compleet)
  ********************/
 
 /* ===== Helpers ===== */
@@ -13,12 +12,13 @@ function calcHours(start, end, pauze, wachturen, rusturen) {
   const [sh, sm] = start.split(':').map(Number);
   const [eh, em] = end.split(':').map(Number);
   let s = sh + sm/60, e = eh + em/60, diff = e - s;
-  if (diff < 0) diff += 24;
-
-  return Math.max(0, diff 
-    - (parseFloat(pauze) || 0) 
-    - (parseFloat(wachturen) || 0) 
-    - (parseFloat(rusturen) || 0));
+  if (diff < 0) diff += 24; // over middernacht
+  return Math.max(0,
+    diff
+    - (parseFloat(pauze)     || 0)
+    - (parseFloat(wachturen) || 0)
+    - (parseFloat(rusturen)  || 0)
+  );
 }
 
 function fmtDate(d) {
@@ -31,20 +31,39 @@ const auth = () => window.auth || firebase.auth();
 const db   = () => window.db   || firebase.firestore();
 
 /* DOM refs */
-const authView     = $('#auth-view');
-const registerCard = $('#register-card');         // we tonen dit niet, maar laten de knop bestaan
-const appView      = $('#app-view');
+const authView = $('#auth-view');
+const appView  = $('#app-view');
+
+/* ===== Globale staat ===== */
+let currentUser  = null;
+let isAdmin      = false;
+let unsubscribe  = null;
+let allRows      = [];          // records voor de tabel
+let userMap      = {};          // uid -> { email, naam, ... }
+
+/* ===== Naam-weergave ===== */
+function getDisplayName(uid, fallbackEmail) {
+  if (userMap[uid]?.naam) return userMap[uid].naam;
+  return userMap[uid]?.email || fallbackEmail || uid;
+}
+
+/* Profielen (namen/emails) ophalen */
+async function loadUserProfiles() {
+  try {
+    if (isAdmin) {
+      const snap = await db().collection('users').get();
+      userMap = {};
+      snap.forEach(d => userMap[d.id] = d.data() || {});
+    } else if (currentUser?.uid) {
+      const d = await db().collection('users').doc(currentUser.uid).get();
+      userMap = { [currentUser.uid]: d.exists ? (d.data() || {}) : { email: currentUser.email } };
+    }
+  } catch (e) {
+    console.error('loadUserProfiles failed', e);
+  }
+}
 
 /* ===== Login / Forgot / Logout ===== */
-$('#to-register')?.addEventListener('click', (e) => {
-  e.preventDefault();
-  registerCard?.classList.remove('hidden');       // zichtbaar maken kan (maar je gebruikt het niet)
-});
-$('#to-login')?.addEventListener('click', (e) => {
-  e.preventDefault();
-  registerCard?.classList.add('hidden');
-});
-
 $('#forgot')?.addEventListener('click', async (e) => {
   e.preventDefault();
   const email = prompt('Vul je e-mailadres in voor de reset-link:');
@@ -70,19 +89,13 @@ $('#login-form')?.addEventListener('submit', async (e) => {
 
 $('#logout')?.addEventListener('click', () => auth().signOut());
 
-/* ===== Globale staat ===== */
-let currentUser  = null;
-let isAdmin      = false;
-let unsubscribe  = null;
-let allRows      = [];   // rows die in de tabel getoond worden
-
 /* ===== Realtime listeners (eigen vs admin-overzicht) ===== */
 function attachRealtimeListeners(useAdminView) {
   if (unsubscribe) { unsubscribe(); unsubscribe = null; }
 
   const month = $('#filterMaand').value || new Date().toISOString().slice(0, 7);
-  let q;
 
+  let q;
   if (useAdminView) {
     // Admin: alle entries van alle users voor deze maand
     q = db().collectionGroup('entries')
@@ -123,7 +136,7 @@ function renderTable() {
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${r.email || r.uid}</td>
+      <td>${getDisplayName(r.uid, r.email)}</td>
       <td>${r.voorWie || ''}</td>
       <td>${fmtDate(r.datum)}</td>
       <td>${r.starttijd || ''}</td>
@@ -173,25 +186,25 @@ function renderTable() {
 /* ===== Uren toevoegen ===== */
 $('#hours-form')?.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const form = e.currentTarget;            // dit is het <form>-element (niet de knop)
+  const form = e.currentTarget; // <form>
 
   try {
     const dateVal = $('#datum').value;
 
     const row = {
-  voorWie    : $('#voorWie').value,
-  datum      : dateVal,
-  month      : byMonth(dateVal),
-  starttijd  : $('#starttijd').value,
-  eindtijd   : $('#eindtijd').value,
-  pauze      : $('#pauze').value || '0',
-  wachturen  : $('#wachturen') ? $('#wachturen').value || '0' : '0',
-  rusturen   : $('#rusturen') ? $('#rusturen').value || '0' : '0',
-  opmerkingen: $('#opmerkingen').value,
-  email      : (currentUser || {}).email || '',
-  goedgekeurd: false,
-  createdAt  : firebase.firestore.FieldValue.serverTimestamp(),
-};
+      voorWie    : $('#voorWie').value,
+      datum      : dateVal,
+      month      : byMonth(dateVal),
+      starttijd  : $('#starttijd').value,
+      eindtijd   : $('#eindtijd').value,
+      pauze      : $('#pauze').value || '0',
+      wachturen  : $('#wachturen') ? $('#wachturen').value || '0' : '0',
+      rusturen   : $('#rusturen')  ? $('#rusturen').value  || '0' : '0',
+      opmerkingen: $('#opmerkingen').value,
+      email      : (currentUser || {}).email || '',
+      goedgekeurd: false,
+      createdAt  : firebase.firestore.FieldValue.serverTimestamp(),
+    };
     row.uren = calcHours(row.starttijd, row.eindtijd, row.pauze, row.wachturen, row.rusturen);
 
     await db().collection('users').doc(currentUser.uid).collection('entries').add(row);
@@ -204,9 +217,11 @@ $('#hours-form')?.addEventListener('submit', async (e) => {
       attachRealtimeListeners(useAdminView);
     }
 
-    // Formulier veilig resetten
+    // Formulier veilig resetten + defaults
     if (form && typeof form.reset === 'function') form.reset();
-    $('#pauze').value = '0';
+    if ($('#pauze'))     $('#pauze').value     = '0';
+    if ($('#wachturen')) $('#wachturen').value = '0';
+    if ($('#rusturen'))  $('#rusturen').value  = '0';
 
     alert('Toegevoegd ✓');
   } catch (err) {
@@ -219,7 +234,9 @@ $('#hours-form')?.addEventListener('submit', async (e) => {
 $('#reset')?.addEventListener('click', () => {
   const f = $('#hours-form');
   f?.reset();
-  $('#pauze').value = '0';
+  if ($('#pauze'))     $('#pauze').value     = '0';
+  if ($('#wachturen')) $('#wachturen').value = '0';
+  if ($('#rusturen'))  $('#rusturen').value  = '0';
 });
 
 /* ===== Filters / Export ===== */
@@ -236,9 +253,13 @@ $('#adminToggle')?.addEventListener('change', () => {
 });
 
 $('#exportCsv')?.addEventListener('click', () => {
-  const rows = [['Medewerker', 'Voor wie', 'Datum', 'Start', 'Eind', 'Pauze', 'Wachturen', 'Rusturen', 'Uren', 'Opmerkingen', 'Goedgekeurd']];
+  const rows = [[
+    'Medewerker','Voor wie','Datum','Start','Eind',
+    'Pauze','Wachturen','Rusturen','Uren','Opmerkingen','Goedgekeurd'
+  ]];
+
   allRows.forEach(r => rows.push([
-    r.email || r.uid,
+    getDisplayName(r.uid, r.email),
     r.voorWie || '',
     fmtDate(r.datum),
     r.starttijd || '',
@@ -274,8 +295,11 @@ firebase.auth().onAuthStateChanged(async (user) => {
     }
     isAdmin = (role === 'admin');
 
+    // Profielen/namen inladen voor weergave
+    await loadUserProfiles();
+
     // UI
-    $('#who').textContent  = user.email;
+    $('#who').textContent  = getDisplayName(user.uid, user.email);
     $('#role').textContent = role;
     $('#role').style.display = 'inline-block';
 
