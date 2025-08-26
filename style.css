@@ -88,6 +88,12 @@ button.danger{
 }
 button.danger:hover{ background: #fdecea; }
 
+button.large{
+  padding:14px 20px;
+  font-size:1.05rem;
+  border-radius:12px;
+}
+
 /* Bar / tools */
 .bar{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
 .tools{ display:flex; align-items:center; gap:8px; }
