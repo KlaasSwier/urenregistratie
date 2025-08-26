@@ -6,6 +6,10 @@
 const $  = (q) => document.querySelector(q);
 const $$ = (q) => Array.from(document.querySelectorAll(q));
 const byMonth = (isoDate) => (isoDate || '').slice(0, 7);
+const parseTime = (t = '') => {
+  const [h = 0, m = 0] = t.split(':').map(Number);
+  return h * 60 + m;
+};
 
 function calcHours(start, end, pauze, wachturen, rusturen, nightShift = false) {
   if (!start || !end) return 0;
@@ -251,52 +255,132 @@ function renderTable() {
 $('#hours-form')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const form = e.currentTarget;
-  const nightShift = $('#nachtshift')?.checked;
-
+  
   const dateVal = $('#datum').value;
+  const start   = $('#starttijd').value;
+  const end     = $('#eindtijd').value;
 
-  const row = {
+  const base = {
     voorWie    : $('#voorWie').value,
-    datum      : dateVal,
-    month      : byMonth(dateVal),
-    starttijd  : $('#starttijd').value,
-    eindtijd   : $('#eindtijd').value,
+    
     pauze      : $('#pauze').value || '0',
     wachturen  : $('#wachturen') ? $('#wachturen').value || '0' : '0',
     rusturen   : $('#rusturen')  ? $('#rusturen').value  || '0' : '0',
     opmerkingen: $('#opmerkingen').value,
     email      : (currentUser || {}).email || '',
     goedgekeurd: false,
-    createdAt  : firebase.firestore.FieldValue.serverTimestamp(),
+   
   };
-  try {
-    row.uren = calcHours(row.starttijd, row.eindtijd, row.pauze, row.wachturen, row.rusturen, nightShift);
-  } catch (err) {
-    alert(err.message);
-    return;
-  }
+ const startMin = parseTime(start);
+  const endMin   = parseTime(end);
+  const crossesMidnight = endMin < startMin;
 
-try {
-    await db().collection('users').doc(currentUser.uid).collection('entries').add(row);
+  const col = db().collection('users').doc(currentUser.uid).collection('entries');
 
-    // Spring automatisch naar de juiste maand in de filter
-    const filter = $('#filterMaand');
-    if (filter && filter.value !== row.month) {
-      filter.value = row.month;
-      const useAdminView = isAdmin && $('#adminToggle').checked;
-      attachRealtimeListeners(useAdminView);
+  if (crossesMidnight) {
+    const next = new Date(dateVal);
+    next.setDate(next.getDate() + 1);
+    const nextDate = next.toISOString().slice(0,10);
+
+    const seg1 = 24*60 - startMin;
+    const seg2 = endMin;
+    const total = seg1 + seg2;
+    const r1 = seg1 / total;
+    const r2 = seg2 / total;
+    const round = (n) => (Math.round(n * 100) / 100).toString();
+    const split = (val) => {
+      const n = parseFloat(val) || 0;
+      return [round(n * r1), round(n * r2)];
+    };
+
+    const [pauze1, pauze2] = split(base.pauze);
+    const [wacht1, wacht2] = split(base.wachturen);
+    const [rust1, rust2]   = split(base.rusturen);
+
+    const row1 = {
+      ...base,
+      datum     : dateVal,
+      month     : byMonth(dateVal),
+      starttijd : start,
+      eindtijd  : '00:00',
+      pauze     : pauze1,
+      wachturen : wacht1,
+      rusturen  : rust1,
+      createdAt : firebase.firestore.FieldValue.serverTimestamp(),
+    };
+    const row2 = {
+      ...base,
+      datum     : nextDate,
+      month     : byMonth(nextDate),
+      starttijd : '00:00',
+      eindtijd  : end,
+      pauze     : pauze2,
+      wachturen : wacht2,
+      rusturen  : rust2,
+      createdAt : firebase.firestore.FieldValue.serverTimestamp(),
+    };
+    try {
+      row1.uren = calcHours(row1.starttijd, '00:00', row1.pauze, row1.wachturen, row1.rusturen, true);
+      row2.uren = calcHours('00:00', row2.eindtijd, row2.pauze, row2.wachturen, row2.rusturen);
+    } catch (err) {
+      alert(err.message);
+      return;
     }
+    try {
+      await Promise.all([col.add(row1), col.add(row2)]);
 
-    // Form reset + defaults
-    if (form && typeof form.reset === 'function') form.reset();
-    if ($('#pauze'))     $('#pauze').value     = '0';
-    if ($('#wachturen')) $('#wachturen').value = '0';
-    if ($('#rusturen'))  $('#rusturen').value  = '0';
+      const filter = $('#filterMaand');
+      if (filter && ![row1.month, row2.month].includes(filter.value)) {
+        filter.value = row1.month;
+        const useAdminView = isAdmin && $('#adminToggle').checked;
+        attachRealtimeListeners(useAdminView);
+      }
+if (form && typeof form.reset === 'function') form.reset();
+      if ($('#pauze'))     $('#pauze').value     = '0';
+      if ($('#wachturen')) $('#wachturen').value = '0';
+      if ($('#rusturen'))  $('#rusturen').value  = '0';
 
-    alert('Toegevoegd ✓');
-  } catch (err) {
-    console.error(err);
-    alert('Opslaan mislukt: ' + err.message);
+      alert('Toegevoegd ✓');
+    } catch (err) {
+      console.error(err);
+      alert('Opslaan mislukt: ' + err.message);
+    }
+  } else {
+    const row = {
+      ...base,
+      datum     : dateVal,
+      month     : byMonth(dateVal),
+      starttijd : start,
+      eindtijd  : end,
+      createdAt : firebase.firestore.FieldValue.serverTimestamp(),
+    };
+    try {
+      row.uren = calcHours(row.starttijd, row.eindtijd, row.pauze, row.wachturen, row.rusturen);
+    } catch (err) {
+      alert(err.message);
+      return;
+
+    }
+try {
+      await col.add(row);
+    
+   const filter = $('#filterMaand');
+      if (filter && filter.value !== row.month) {
+        filter.value = row.month;
+        const useAdminView = isAdmin && $('#adminToggle').checked;
+        attachRealtimeListeners(useAdminView);
+      }
+
+      if (form && typeof form.reset === 'function') form.reset();
+      if ($('#pauze'))     $('#pauze').value     = '0';
+      if ($('#wachturen')) $('#wachturen').value = '0';
+      if ($('#rusturen'))  $('#rusturen').value  = '0';
+
+      alert('Toegevoegd ✓');
+    } catch (err) {
+      console.error(err);
+      alert('Opslaan mislukt: ' + err.message);
+    }
   }
 });
 
