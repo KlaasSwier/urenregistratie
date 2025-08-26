@@ -471,7 +471,17 @@ $('#exportCsv')?.addEventListener('click', () => {
     ]);
   });
 
-  const csv  = rows.map(r => r.map(v => `"${String(v).replaceAll('"','""')}"`).join(',')).join('\n');
+  const csv  = rows
+    .map(r => r
+      .map(v => {
+        const isNum = typeof v === 'number' || (typeof v === 'string' && v.trim() && !isNaN(v));
+        const val = isNum
+          ? v.toString().replace('.', ',')
+          : String(v);
+        return `"${val.replaceAll('"','""')}"`;
+      })
+      .join(';'))
+    .join('\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
