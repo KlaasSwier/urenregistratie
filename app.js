@@ -70,6 +70,7 @@ $('#login-form')?.addEventListener('submit', async (e) => {
 
 $('#logout')?.addEventListener('click', () => {
   safeUnsubscribe();   // luisteraar eerst stoppen
+  removeActivityListeners();
   auth().signOut();
 });
 
@@ -78,12 +79,36 @@ let currentUser = null;
 let isAdmin     = false;
 let allRows     = [];          // records voor de tabel
 let userMap     = {};          // uid -> { email, naam, role, ... }
+let inactivityTimer = null;    // timer voor automatische logout
+const activityEvents = ['mousemove','keydown','click','touchstart'];
 
 // Realtime listener netjes opruimen
 let unsubscribe = null;
 function safeUnsubscribe() {
   if (unsubscribe) { try { unsubscribe(); } catch (e) {} }
   unsubscribe = null;
+}
+
+function startInactivityTimer() {
+  clearTimeout(inactivityTimer);
+  inactivityTimer = setTimeout(() => {
+    if (confirm('Ingelogd blijven?')) {
+      startInactivityTimer();
+    } else {
+      safeUnsubscribe();
+      auth().signOut();
+    }
+  }, 5 * 60 * 1000);
+}
+
+function addActivityListeners() {
+  activityEvents.forEach(ev => document.addEventListener(ev, startInactivityTimer));
+}
+
+function removeActivityListeners() {
+  activityEvents.forEach(ev => document.removeEventListener(ev, startInactivityTimer));
+  clearTimeout(inactivityTimer);
+  inactivityTimer = null;
 }
 
 // Display name helper
@@ -526,8 +551,11 @@ firebase.auth().onAuthStateChanged(async (user) => {
     $('#adminToggle').checked  = isAdmin;
 
     attachRealtimeListeners(isAdmin);
+    addActivityListeners();
+    startInactivityTimer();
   } else {
     safeUnsubscribe();
+    removeActivityListeners();
     currentUser = null;
     appView.classList.add('hidden');
     authView.classList.remove('hidden');
