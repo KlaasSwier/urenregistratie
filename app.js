@@ -7,12 +7,15 @@ const $  = (q) => document.querySelector(q);
 const $$ = (q) => Array.from(document.querySelectorAll(q));
 const byMonth = (isoDate) => (isoDate || '').slice(0, 7);
 
-function calcHours(start, end, pauze, wachturen, rusturen) {
+function calcHours(start, end, pauze, wachturen, rusturen, nightShift = false) {
   if (!start || !end) return 0;
   const [sh, sm] = start.split(':').map(Number);
   const [eh, em] = end.split(':').map(Number);
   let s = sh + sm/60, e = eh + em/60, diff = e - s;
-  if (diff < 0) diff += 24; // over middernacht
+  if (diff < 0) {
+    if (nightShift) diff += 24; // over middernacht
+    else throw new Error('Eindtijd ligt voor starttijd. Vink "nachtelijke shift" aan indien van toepassing.');
+  }
   return Math.max(0,
     diff
     - (parseFloat(pauze)     || 0)
@@ -20,6 +23,7 @@ function calcHours(start, end, pauze, wachturen, rusturen) {
     - (parseFloat(rusturen)  || 0)
   );
 }
+if (typeof module !== 'undefined') module.exports = { calcHours };
 
 function fmtDate(d) {
   try { return new Date(d).toLocaleDateString('nl-NL'); }
@@ -247,26 +251,33 @@ function renderTable() {
 $('#hours-form')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const form = e.currentTarget;
+  const nightShift = $('#nachtshift')?.checked;
+
+  const dateVal = $('#datum').value;
+
+  const row = {
+    voorWie    : $('#voorWie').value,
+    datum      : dateVal,
+    month      : byMonth(dateVal),
+    starttijd  : $('#starttijd').value,
+    eindtijd   : $('#eindtijd').value,
+    pauze      : $('#pauze').value || '0',
+    wachturen  : $('#wachturen') ? $('#wachturen').value || '0' : '0',
+    rusturen   : $('#rusturen')  ? $('#rusturen').value  || '0' : '0',
+    opmerkingen: $('#opmerkingen').value,
+    email      : (currentUser || {}).email || '',
+    goedgekeurd: false,
+    createdAt  : firebase.firestore.FieldValue.serverTimestamp(),
+  };
 
   try {
-    const dateVal = $('#datum').value;
+    row.uren = calcHours(row.starttijd, row.eindtijd, row.pauze, row.wachturen, row.rusturen, nightShift);
+  } catch (err) {
+    alert(err.message);
+    return;
+  }
 
-    const row = {
-      voorWie    : $('#voorWie').value,
-      datum      : dateVal,
-      month      : byMonth(dateVal),
-      starttijd  : $('#starttijd').value,
-      eindtijd   : $('#eindtijd').value,
-      pauze      : $('#pauze').value || '0',
-      wachturen  : $('#wachturen') ? $('#wachturen').value || '0' : '0',
-      rusturen   : $('#rusturen')  ? $('#rusturen').value  || '0' : '0',
-      opmerkingen: $('#opmerkingen').value,
-      email      : (currentUser || {}).email || '',
-      goedgekeurd: false,
-      createdAt  : firebase.firestore.FieldValue.serverTimestamp(),
-    };
-    row.uren = calcHours(row.starttijd, row.eindtijd, row.pauze, row.wachturen, row.rusturen);
-
+  try {
     await db().collection('users').doc(currentUser.uid).collection('entries').add(row);
 
     // Spring automatisch naar de juiste maand in de filter
