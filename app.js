@@ -11,23 +11,28 @@ const parseTime = (t = '') => {
   return h * 60 + m;
 };
 
-function calcHours(start, end, pauze, wachturen, rusturen, nightShift = false) {
+function calcInterval(start, end, nightShift = false) {
   if (!start || !end) return 0;
   const [sh, sm] = start.split(':').map(Number);
   const [eh, em] = end.split(':').map(Number);
-  let s = sh + sm/60, e = eh + em/60, diff = e - s;
+  let s = sh + sm / 60, e = eh + em / 60, diff = e - s;
   if (diff < 0) {
-    if (nightShift) diff += 24; // over middernacht
+    if (nightShift) diff += 24;
     else throw new Error('Eindtijd ligt voor starttijd. Vink "nachtelijke shift" aan indien van toepassing.');
   }
+return Math.round(diff * 100) / 100;
+}
+
+function calcHours(start, end, pauzeDur, wachtDur, rustDur, nightShift = false) {
+  const diff = calcInterval(start, end, nightShift);
   return Math.max(0,
     diff
-    - (parseFloat(pauze)     || 0)
-    - (parseFloat(wachturen) || 0)
-    - (parseFloat(rusturen)  || 0)
+    - (parseFloat(pauzeDur) || 0)
+    - (parseFloat(wachtDur) || 0)
+    - (parseFloat(rustDur)  || 0)
   );
 }
-if (typeof module !== 'undefined') module.exports = { calcHours };
+if (typeof module !== 'undefined') module.exports = { calcHours, calcInterval };
 
 function fmtDate(d) {
   try { return new Date(d).toLocaleDateString('nl-NL'); }
@@ -202,16 +207,20 @@ function renderTable() {
     if (whoFilter && r.voorWie !== whoFilter) return;
     if (isAdmin && medewerkerUidFilter && r.uid !== medewerkerUidFilter) return;
 
-    const tr = document.createElement('tr');
+  const pauzeVal = r.pauzeDur ?? (parseFloat(r.pauze) || 0);
+    const wachtVal = r.wachtDur ?? (parseFloat(r.wachturen) || 0);
+    const rustVal  = r.rustDur  ?? (parseFloat(r.rusturen)  || 0);  
+
+  const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${getDisplayName(r.uid, r.email)}</td>
       <td>${r.voorWie || ''}</td>
       <td>${fmtDate(r.datum)}</td>
       <td>${r.starttijd || ''}</td>
       <td>${r.eindtijd || ''}</td>
-      <td>${r.pauze || '0'}</td>
-      <td>${r.wachturen || 0}</td>
-      <td>${r.rusturen || 0}</td>
+      <td>${pauzeVal.toFixed(2)}</td>
+      <td>${wachtVal.toFixed(2)}</td>
+      <td>${rustVal.toFixed(2)}</td>
       <td><span class="badge">${(r.uren || 0).toFixed(2)}</span></td>
       <td>${(r.opmerkingen || '').replace(/\n/g, '<br>')}</td>
       <td>${
@@ -260,21 +269,33 @@ $('#hours-form')?.addEventListener('submit', async (e) => {
   const start   = $('#starttijd').value;
   const end     = $('#eindtijd').value;
 
-  const base = {
-    voorWie    : $('#voorWie').value,
-    
-    pauze      : $('#pauze').value || '0',
-    wachturen  : $('#wachturen') ? $('#wachturen').value || '0' : '0',
-    rusturen   : $('#rusturen')  ? $('#rusturen').value  || '0' : '0',
-    opmerkingen: $('#opmerkingen').value,
-    email      : (currentUser || {}).email || '',
-    goedgekeurd: false,
-   
-  };
- const startMin = parseTime(start);
+  const startMin = parseTime(start);
   const endMin   = parseTime(end);
   const crossesMidnight = endMin < startMin;
 
+  const pauzeStart = $('#pauzeStart')?.value || '';
+  const pauzeEnd   = $('#pauzeEnd')?.value || '';
+  const wachtStart = $('#wachtStart')?.value || '';
+  const wachtEnd   = $('#wachtEnd')?.value || '';
+  const rustStart  = $('#rustStart')?.value || '';
+  const rustEnd    = $('#rustEnd')?.value || '';
+
+  const base = {
+    voorWie    : $('#voorWie').value,
+  pauzeStart,
+    pauzeEnd,
+    pauzeDur   : calcInterval(pauzeStart, pauzeEnd, parseTime(pauzeEnd) < parseTime(pauzeStart)),
+    wachtStart,
+    wachtEnd,
+    wachtDur   : calcInterval(wachtStart, wachtEnd, parseTime(wachtEnd) < parseTime(wachtStart)),
+    rustStart,
+    rustEnd,
+    rustDur    : calcInterval(rustStart, rustEnd, parseTime(rustEnd) < parseTime(rustStart)),
+    opmerkingen: $('#opmerkingen').value,
+    email      : (currentUser || {}).email || '',
+    goedgekeurd: false,
+    };
+ 
   const col = db().collection('users').doc(currentUser.uid).collection('entries');
 
   if (crossesMidnight) {
@@ -282,20 +303,22 @@ $('#hours-form')?.addEventListener('submit', async (e) => {
     next.setDate(next.getDate() + 1);
     const nextDate = next.toISOString().slice(0,10);
 
-    const seg1 = 24*60 - startMin;
-    const seg2 = endMin;
-    const total = seg1 + seg2;
-    const r1 = seg1 / total;
-    const r2 = seg2 / total;
-    const round = (n) => (Math.round(n * 100) / 100).toString();
-    const split = (val) => {
-      const n = parseFloat(val) || 0;
-      return [round(n * r1), round(n * r2)];
+     const toAbs = (m) => (crossesMidnight && m < startMin ? m + 1440 : m);
+    const splitInterval = (sStr, eStr) => {
+      if (!sStr || !eStr) return [{ start:'', end:'', dur:0 }, { start:'', end:'', dur:0 }];
+      let s = toAbs(parseTime(sStr));
+      let e = toAbs(parseTime(eStr));
+      if (e < s) e += 1440;
+      const firstMin = Math.max(0, Math.min(e, 1440) - s);
+      const secondMin = Math.max(0, e - Math.max(s, 1440));
+      const first = firstMin ? { start: sStr, end: e > 1440 ? '00:00' : eStr, dur: firstMin/60 } : { start:'', end:'', dur:0 };
+      const second = secondMin ? { start: s < 1440 ? '00:00' : sStr, end: eStr, dur: secondMin/60 } : { start:'', end:'', dur:0 };
+      return [first, second];
     };
 
-    const [pauze1, pauze2] = split(base.pauze);
-    const [wacht1, wacht2] = split(base.wachturen);
-    const [rust1, rust2]   = split(base.rusturen);
+    const [p1, p2] = splitInterval(base.pauzeStart, base.pauzeEnd);
+    const [w1, w2] = splitInterval(base.wachtStart, base.wachtEnd);
+    const [r1, r2] = splitInterval(base.rustStart, base.rustEnd);
 
     const row1 = {
       ...base,
@@ -303,9 +326,15 @@ $('#hours-form')?.addEventListener('submit', async (e) => {
       month     : byMonth(dateVal),
       starttijd : start,
       eindtijd  : '00:00',
-      pauze     : pauze1,
-      wachturen : wacht1,
-      rusturen  : rust1,
+       pauzeStart: p1.start,
+      pauzeEnd  : p1.end,
+      pauzeDur  : p1.dur,
+      wachtStart: w1.start,
+      wachtEnd  : w1.end,
+      wachtDur  : w1.dur,
+      rustStart : r1.start,
+      rustEnd   : r1.end,
+      rustDur   : r1.dur,
       createdAt : firebase.firestore.FieldValue.serverTimestamp(),
     };
     const row2 = {
@@ -314,14 +343,20 @@ $('#hours-form')?.addEventListener('submit', async (e) => {
       month     : byMonth(nextDate),
       starttijd : '00:00',
       eindtijd  : end,
-      pauze     : pauze2,
-      wachturen : wacht2,
-      rusturen  : rust2,
+      pauzeStart: p2.start,
+      pauzeEnd  : p2.end,
+      pauzeDur  : p2.dur,
+      wachtStart: w2.start,
+      wachtEnd  : w2.end,
+      wachtDur  : w2.dur,
+      rustStart : r2.start,
+      rustEnd   : r2.end,
+      rustDur   : r2.dur,
       createdAt : firebase.firestore.FieldValue.serverTimestamp(),
     };
     try {
-      row1.uren = calcHours(row1.starttijd, '00:00', row1.pauze, row1.wachturen, row1.rusturen, true);
-      row2.uren = calcHours('00:00', row2.eindtijd, row2.pauze, row2.wachturen, row2.rusturen);
+      row1.uren = calcHours(row1.starttijd, '00:00', row1.pauzeDur, row1.wachtDur, row1.rustDur, true);
+      row2.uren = calcHours('00:00', row2.eindtijd, row2.pauzeDur, row2.wachtDur, row2.rustDur);
     } catch (err) {
       alert(err.message);
       return;
@@ -336,11 +371,9 @@ $('#hours-form')?.addEventListener('submit', async (e) => {
         attachRealtimeListeners(useAdminView);
       }
 if (form && typeof form.reset === 'function') form.reset();
-      if ($('#pauze'))     $('#pauze').value     = '0';
-      if ($('#wachturen')) $('#wachturen').value = '0';
-      if ($('#rusturen'))  $('#rusturen').value  = '0';
-
-      alert('Toegevoegd ✓');
+      ['pauzeStart','pauzeEnd','wachtStart','wachtEnd','rustStart','rustEnd'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+     
+ alert('Toegevoegd ✓');
     } catch (err) {
       console.error(err);
       alert('Opslaan mislukt: ' + err.message);
@@ -355,7 +388,7 @@ if (form && typeof form.reset === 'function') form.reset();
       createdAt : firebase.firestore.FieldValue.serverTimestamp(),
     };
     try {
-      row.uren = calcHours(row.starttijd, row.eindtijd, row.pauze, row.wachturen, row.rusturen);
+      row.uren = calcHours(row.starttijd, row.eindtijd, row.pauzeDur, row.wachtDur, row.rustDur, crossesMidnight);
     } catch (err) {
       alert(err.message);
       return;
@@ -372,9 +405,7 @@ try {
       }
 
       if (form && typeof form.reset === 'function') form.reset();
-      if ($('#pauze'))     $('#pauze').value     = '0';
-      if ($('#wachturen')) $('#wachturen').value = '0';
-      if ($('#rusturen'))  $('#rusturen').value  = '0';
+      ['pauzeStart','pauzeEnd','wachtStart','wachtEnd','rustStart','rustEnd'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
 
       alert('Toegevoegd ✓');
     } catch (err) {
@@ -388,9 +419,10 @@ try {
 $('#reset')?.addEventListener('click', () => {
   const f = $('#hours-form');
   f?.reset();
-  if ($('#pauze'))     $('#pauze').value     = '0';
-  if ($('#wachturen')) $('#wachturen').value = '0';
-  if ($('#rusturen'))  $('#rusturen').value  = '0';
+  ['pauzeStart','pauzeEnd','wachtStart','wachtEnd','rustStart','rustEnd'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
 });
 
 /* ===== Filters / Export ===== */
@@ -420,15 +452,19 @@ $('#exportCsv')?.addEventListener('click', () => {
     if (whoFilter && r.voorWie !== whoFilter) return;
     if (isAdmin && medewerkerUidFilter && r.uid !== medewerkerUidFilter) return;
 
+    const pauzeVal = r.pauzeDur ?? (parseFloat(r.pauze) || 0);
+    const wachtVal = r.wachtDur ?? (parseFloat(r.wachturen) || 0);
+    const rustVal  = r.rustDur  ?? (parseFloat(r.rusturen)  || 0);
+
     rows.push([
       getDisplayName(r.uid, r.email),
       r.voorWie || '',
       fmtDate(r.datum),
       r.starttijd || '',
       r.eindtijd || '',
-      r.pauze || '0',
-      r.wachturen || 0,
-      r.rusturen || 0,
+      pauzeVal,
+      wachtVal,
+      rustVal,
       r.uren || 0,
       (r.opmerkingen || '').replace(/\n/g, ' '),
       r.goedgekeurd ? 'JA' : 'NEE'
