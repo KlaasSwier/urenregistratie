@@ -57,7 +57,7 @@ $('#forgot')?.addEventListener('click', async (e) => {
   const email = prompt('Vul je e-mailadres in voor de reset-link:');
   if (!email) return;
   const actionCodeSettings = {
-    url: 'https://jouwdomein.nl/reset',
+    url: 'https://uren.klaasswier.nl/reset',
     handleCodeInApp: true,
   };
   try { await auth().sendPasswordResetEmail(email, actionCodeSettings); alert('Reset e-mail verstuurd.'); }
