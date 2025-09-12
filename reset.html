@@ -1,0 +1,63 @@
+ (cd "$(git rev-parse --show-toplevel)" && git apply --3way <<'EOF' 
+diff --git a//dev/null b/reset.html
+index 0000000000000000000000000000000000000000..bda9289a21bb24b6ca4d0184401b1f791e48a9f8 100644
+--- a//dev/null
++++ b/reset.html
+@@ -0,0 +1,54 @@
++<!doctype html>
++<html lang="nl">
++<head>
++  <meta charset="utf-8" />
++  <meta name="viewport" content="width=device-width, initial-scale=1" />
++  <title>Wachtwoord resetten</title>
++  <link rel="stylesheet" href="style.css" />
++</head>
++<body>
++  <header class="container header-logos">
++    <div class="title-wrap">
++      <h1>Urenregistratie</h1>
++      <p class="subtitle">Nieuw wachtwoord instellen</p>
++    </div>
++    <div class="brand">
++      <img src="logo vee en vleeshandel1.png" alt="Logo 1" class="logo" />
++      <img src="Logo VOF.png" alt="Logo 2" class="logo right" />
++    </div>
++  </header>
++
++  <main class="container" id="reset-view">
++    <section class="card maxw">
++      <h2>Wachtwoord resetten</h2>
++      <form id="reset-form" class="grid">
++        <label>Nieuw wachtwoord
++          <input id="new-pass" type="password" required minlength="6" />
++        </label>
++        <button type="submit" class="primary large">Opslaan</button>
++      </form>
++    </section>
++  </main>
++
++  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
++  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
++  <script src="firebase-config.js"></script>
++  <script>
++    const auth = firebase.auth();
++    const params = new URLSearchParams(window.location.search);
++    const oobCode = params.get('oobCode');
++
++    document.getElementById('reset-form').addEventListener('submit', async (e) => {
++      e.preventDefault();
++      const newPass = document.getElementById('new-pass').value;
++      try {
++        await auth.confirmPasswordReset(oobCode, newPass);
++        alert('Wachtwoord is succesvol aangepast.');
++        window.location.href = 'index.html';
++      } catch (err) {
++        alert(err.message);
++      }
++    });
++  </script>
++</body>
++</html>
+ 
+EOF
+)

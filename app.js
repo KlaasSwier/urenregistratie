@@ -56,7 +56,11 @@ $('#forgot')?.addEventListener('click', async (e) => {
   e.preventDefault();
   const email = prompt('Vul je e-mailadres in voor de reset-link:');
   if (!email) return;
-  try { await auth().sendPasswordResetEmail(email); alert('Reset e-mail verstuurd.'); }
+  const actionCodeSettings = {
+    url: 'https://jouwdomein.nl/reset',
+    handleCodeInApp: true,
+  };
+  try { await auth().sendPasswordResetEmail(email, actionCodeSettings); alert('Reset e-mail verstuurd.'); }
   catch (err) { alert(err.message); }
 });
 
