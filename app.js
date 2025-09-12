@@ -54,8 +54,11 @@ $('#to-login')?.addEventListener('click', (e) => { e.preventDefault(); registerC
 
 $('#forgot')?.addEventListener('click', async (e) => {
   e.preventDefault();
-  const email = prompt('Vul je e-mailadres in voor de reset-link:');
-  if (!email) return;
+   const email = $('#login-email').value.trim();
+  if (!email) {
+    alert('Vul je e-mailadres in.');
+    return;
+  }
   const actionCodeSettings = {
     url: 'https://uren.klaasswier.nl/reset',
     handleCodeInApp: true,
