@@ -148,3 +148,80 @@ tbody tr:hover{ background:#f8fcfa; }
   .logo{ height:48px; }
   .logo.right{ height:40px; }
 }
+/* ==========================================================
+   MOOIERE LOGINPAGINA
+   (voeg dit helemaal onderaan style.css toe)
+   ========================================================== */
+
+#auth-view{
+    margin-top:35px;
+}
+
+#auth-view .card{
+    max-width:560px;
+    margin:35px auto;
+    padding:28px;
+    border-radius:18px;
+    border:1px solid #d8e4d3;
+    box-shadow:0 12px 30px rgba(0,0,0,.08);
+}
+
+.header{
+    margin-bottom:25px;
+}
+
+.brand{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    gap:18px;
+    flex-wrap:wrap;
+}
+
+.logo{
+    height:85px;
+    width:auto;
+    object-fit:contain;
+    background:#fff;
+    padding:8px;
+    border-radius:10px;
+    box-shadow:0 3px 8px rgba(0,0,0,.08);
+    transition:.2s;
+}
+
+.logo:hover{
+    transform:translateY(-2px);
+}
+
+.titles{
+    text-align:center;
+    width:100%;
+    margin-bottom:15px;
+}
+
+.titles h1{
+    font-size:2.3rem;
+    color:#163d20;
+    margin-bottom:6px;
+}
+
+.subtitle{
+    font-size:1.1rem;
+    color:#617765;
+}
+
+#auth-view button.primary{
+    width:100%;
+    padding:14px;
+    font-size:1.05rem;
+    border-radius:10px;
+}
+
+#auth-view .grid input{
+    padding:12px;
+}
+
+.foot{
+    margin-top:25px;
+    opacity:.8;
+}
