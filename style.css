@@ -28,8 +28,6 @@ body{
   color: var(--text);
   line-height: 1.45;
 }
-}
-}
 
 /* Containers */
 .container{
@@ -243,4 +241,16 @@ tbody tr:hover{ background:#f8fcfa; }
 .header-logos .title-wrap{
   text-align:center;
   width:100%;
+}
+/* Loginpagina: invoervelden kleiner houden */
+#auth-view .grid{
+  grid-template-columns: 1fr 1fr;
+}
+
+#auth-view .grid input{
+  max-width: 100%;
+}
+
+#auth-view .card{
+  max-width: 520px;
 }
