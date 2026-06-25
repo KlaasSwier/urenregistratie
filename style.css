@@ -226,3 +226,11 @@ tbody tr:hover{ background:#f8fcfa; }
     margin-top:25px;
     opacity:.8;
 }
+.header-logos{
+  text-align:center;
+}
+
+.header-logos .title-wrap{
+  text-align:center;
+  width:100%;
+}
