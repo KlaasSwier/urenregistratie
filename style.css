@@ -292,3 +292,52 @@ tbody tr:hover{ background:#f8fcfa; }
     font-size: 1rem;
   }
 }
+/* Mobiel: registratieformulier compacter en netter */
+@media (max-width: 768px) {
+
+  #app-view .container,
+  #app-view.container{
+    padding: 0 12px;
+  }
+
+  #app-view .card{
+    width: calc(100% - 20px);
+    margin: 14px auto;
+    padding: 18px;
+    border-radius: 16px;
+  }
+
+  #app-view h2{
+    font-size: 1.45rem;
+    margin-bottom: 16px;
+  }
+
+  #app-view .grid{
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  #app-view .grid label{
+    font-size: 1rem;
+    gap: 6px;
+  }
+
+  #app-view .grid input,
+  #app-view .grid select,
+  #app-view .grid textarea{
+    width: 100%;
+    max-width: 100%;
+    min-height: 46px;
+    padding: 10px 12px;
+    font-size: 1rem;
+    border-radius: 10px;
+  }
+
+  #app-view .actions{
+    flex-direction: column;
+  }
+
+  #app-view .actions button{
+    width: 100%;
+  }
+}
