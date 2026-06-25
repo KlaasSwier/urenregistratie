@@ -176,6 +176,7 @@ tbody tr:hover{ background:#f8fcfa; }
     align-items:center;
     gap:18px;
     flex-wrap:wrap;
+    margin-top:20px;
 }
 }
 
