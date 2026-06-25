@@ -257,3 +257,38 @@ tbody tr:hover{ background:#f8fcfa; }
 #auth-view .card{
   max-width: 520px;
 }
+/* Mobiele weergave */
+@media (max-width: 768px) {
+
+  #auth-view .grid{
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  #auth-view .card{
+    width: 95%;
+    max-width: 420px;
+    padding: 24px;
+  }
+
+  #auth-view button.primary{
+    width: 100%;
+  }
+
+  .brand{
+    gap: 12px;
+  }
+
+  .logo{
+    height: 70px;
+  }
+
+  .titles h1{
+    font-size: 2rem;
+  }
+
+  .subtitle{
+    font-size: 1rem;
+  }
+}
