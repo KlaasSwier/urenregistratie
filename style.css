@@ -16,16 +16,18 @@
 *{ box-sizing: border-box; }
 html,body{ height:100%; }
 body{
-    margin:0;
-    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", sans-serif;
+  margin:0;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", sans-serif;
 
-    background:
-        radial-gradient(circle at top left, rgba(255,255,255,.55), transparent 35%),
-        radial-gradient(circle at bottom right, rgba(255,255,255,.25), transparent 40%),
-        linear-gradient(180deg,#edf4e2 0%,#dee8c8 100%);
+  background:
+    radial-gradient(circle at 50% 22%, rgba(255,255,255,.85), transparent 32%),
+    radial-gradient(circle at 20% 85%, rgba(190,215,160,.55), transparent 35%),
+    radial-gradient(circle at 85% 80%, rgba(160,190,130,.35), transparent 38%),
+    linear-gradient(180deg, #f3f8ea 0%, #dbe8c6 100%);
 
-    color:var(--text);
-    line-height:1.45;
+  color: var(--text);
+  line-height: 1.45;
+}
 }
 }
 
