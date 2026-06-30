@@ -206,10 +206,9 @@ async function loadCompanyMedewerkers(bedrijf) {
     const naam = data.naam || doc.id;
 
     const option = document.createElement("option");
-    option.value = naam;
-    option.textContent = naam;
-    ...
-    select.appendChild(option);
+option.value = naam;
+option.textContent = naam;
+select.appendChild(option);
   });
 
 }
