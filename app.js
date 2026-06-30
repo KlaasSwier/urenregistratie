@@ -199,35 +199,64 @@ async function loadCompanyMedewerkers(bedrijf) {
     .collection("bedrijven")
     .doc(bedrijf)
     .collection("medewerkers")
-    .orderBy("naam")
     .get();
 
   snap.forEach(doc => {
-    const data = doc.data();
+    const data = doc.data() || {};
+    const naam = data.naam || doc.id;
+
     const option = document.createElement("option");
-    option.value = data.naam;
-    option.textContent = data.naam;
+    option.value = naam;
+    option.textContent = naam;
     select.appendChild(option);
   });
 }
 
 async function setupCompanyAdminUI() {
+  const bedrijf = currentProfile.bedrijf || "Slagerij Rotterdam";
 
-  const bedrijf = currentProfile.bedrijf;
+  const voorWie = document.getElementById("voorWie");
+  if (voorWie) {
+    voorWie.value = bedrijf;
+    voorWie.disabled = true;
+  }
 
-  document.getElementById("voorWie").value = bedrijf;
-  document.getElementById("voorWie").disabled = true;
+  const filterWie = document.getElementById("filterWie");
+  if (filterWie) {
+    filterWie.value = bedrijf;
+    filterWie.disabled = true;
+  }
 
-  document.getElementById("boekMedewerkerWrap").classList.remove("hidden");
+  let wrap = document.getElementById("boekMedewerkerWrap");
 
-  [
-    "wachtStart",
-    "wachtEnd",
-    "rustStart",
-    "rustEnd"
-  ].forEach(id => {
-    document.getElementById(id).closest("label").style.display = "none";
+  // Als het veld nog niet in index.html staat, maak het automatisch aan
+  if (!wrap) {
+    const voorWieLabel = voorWie?.closest("label");
+    wrap = document.createElement("label");
+    wrap.id = "boekMedewerkerWrap";
+    wrap.innerHTML = `
+      Medewerker
+      <select id="boekMedewerker" required>
+        <option value="">— kies medewerker —</option>
+      </select>
+    `;
+    voorWieLabel?.insertAdjacentElement("afterend", wrap);
+  }
+
+  wrap.classList.remove("hidden");
+  wrap.style.display = "flex";
+
+  ["wachtStart", "wachtEnd", "rustStart", "rustEnd"].forEach(id => {
+    const el = document.getElementById(id);
+    const label = el?.closest("label");
+    if (label) label.style.display = "none";
   });
+
+  const adminToggle = document.getElementById("adminToggle");
+  if (adminToggle) {
+    adminToggle.checked = false;
+    adminToggle.disabled = true;
+  }
 
   await loadCompanyMedewerkers(bedrijf);
 }
