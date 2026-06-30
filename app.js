@@ -612,7 +612,7 @@ $('#exportCsv')?.addEventListener('click', () => {
     const rustVal  = r.rustDur  ?? (parseFloat(r.rusturen)  || 0);
 
     rows.push([
-      getDisplayName(r.uid, r.email),
+      r.medewerkerNaam || getDisplayName(r.uid, r.email),
       r.voorWie || '',
       fmtDate(r.datum),
       r.starttijd || '',
