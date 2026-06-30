@@ -208,7 +208,42 @@ async function loadCompanyMedewerkers(bedrijf) {
     const option = document.createElement("option");
     option.value = naam;
     option.textContent = naam;
+    ...
     select.appendChild(option);
+  });
+
+}
+
+function resetCompanyAdminUI() {
+
+  const voorWie = document.getElementById("voorWie");
+  if (voorWie) {
+    voorWie.disabled = false;
+    voorWie.value = "";
+  }
+
+  const filterWie = document.getElementById("filterWie");
+  if (filterWie) {
+    filterWie.disabled = false;
+    filterWie.value = "";
+  }
+
+  const wrap = document.getElementById("boekMedewerkerWrap");
+  if (wrap) {
+    wrap.classList.add("hidden");
+    wrap.style.display = "none";
+  }
+
+  const select = document.getElementById("boekMedewerker");
+  if (select) {
+    select.innerHTML = '<option value="">— kies medewerker —</option>';
+    select.value = "";
+  }
+
+  ["wachtStart","wachtEnd","rustStart","rustEnd"].forEach(id => {
+    const el = document.getElementById(id);
+    const label = el?.closest("label");
+    if (label) label.style.display = "";
   });
 }
 
@@ -666,16 +701,17 @@ currentProfile = { email: user.email, ...data };
       adminToggle.checked = isAdmin;
     }
 
-   // Speciale weergave voor bedrijfsadmin
+ resetCompanyAdminUI();
+
 if (isCompanyAdmin()) {
-  await setupCompanyAdminUI();
+    await setupCompanyAdminUI();
 }
 
 // Heel belangrijk: pas na role + filters laden
 attachRealtimeListeners(isAdmin);
 
-    addActivityListeners();
-    startInactivityTimer();
+addActivityListeners();
+startInactivityTimer();
 
   } else {
     currentUser = null;
