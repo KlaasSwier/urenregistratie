@@ -79,18 +79,24 @@
       <form id="hours-form">
         <div class="grid">
           <label>Voor wie
-            <select id="voorWie" required>
-              <option value="">— kies —</option>
-<option value="Klaas Swier jr">Klaas Swier jr</option>
-<option value="Klaas sr">Klaas sr</option>
-<option value="Slagerij Rotterdam">Slagerij Rotterdam</option>
-              <!-- voeg hier gerust meer vaste opties toe -->
-            </select>
-          </label>
+    <select id="voorWie" required>
+        <option value="">— kies —</option>
+        <option value="Klaas Swier jr">Klaas Swier jr</option>
+        <option value="Klaas sr">Klaas sr</option>
+        <option value="Slagerij Rotterdam">Slagerij Rotterdam</option>
+    </select>
+</label>
 
-          <label>Datum
-            <input id="datum" type="date" required />
-          </label>
+<label id="boekMedewerkerWrap" class="hidden">
+    Medewerker
+    <select id="boekMedewerker">
+        <option value="">— kies medewerker —</option>
+    </select>
+</label>
+
+<label>Datum
+    <input id="datum" type="date" required />
+</label>
 
           <label>Starttijd
             <input id="starttijd" type="time" required />
