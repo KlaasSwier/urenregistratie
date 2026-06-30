@@ -554,8 +554,15 @@ firebase.auth().onAuthStateChanged(async (user) => {
     $('#filterMaand').value = today.toISOString().slice(0, 7);
 
     // Admin toggle
-    $('#adminToggle').disabled = !isAdmin;
-    $('#adminToggle').checked  = isAdmin;
+    $$('#filterWie').value = '';
+
+const medewerkerFilter = $('#filterMedewerker');
+if (medewerkerFilter) medewerkerFilter.value = '';
+
+$('#adminToggle').disabled = !isAdmin;
+$('#adminToggle').checked  = isAdmin;
+
+attachRealtimeListeners(isAdmin);
 
     attachRealtimeListeners(isAdmin);
     addActivityListeners();
