@@ -700,11 +700,10 @@ currentProfile = { email: user.email, ...data };
       adminToggle.disabled = !isAdmin;
       adminToggle.checked = isAdmin;
     }
-
- resetCompanyAdminUI();
+resetCompanyAdminUI();
 
 if (isCompanyAdmin()) {
-    await setupCompanyAdminUI();
+  await setupCompanyAdminUI();
 }
 
 // Heel belangrijk: pas na role + filters laden
@@ -713,7 +712,7 @@ attachRealtimeListeners(isAdmin);
 addActivityListeners();
 startInactivityTimer();
 
-  } else {
+} else {
     currentUser = null;
     isAdmin = false;
     allRows = [];
