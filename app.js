@@ -84,6 +84,8 @@ $('#logout')?.addEventListener('click', () => {
 /* ===== Globale staat ===== */
 let currentUser = null;
 let isAdmin     = false;
+let currentRole = 'user';
+let currentProfile = {};
 let allRows     = [];          // records voor de tabel
 let userMap     = {};          // uid -> { email, naam, role, ... }
 let inactivityTimer = null;    // timer voor automatische logout
