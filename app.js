@@ -185,6 +185,52 @@ function populateMedewerkerFilter() {
 }
 
 /* ===== Realtime listeners ===== */
+function isCompanyAdmin() {
+  return currentRole === "companyAdmin";
+}
+
+async function loadCompanyMedewerkers(bedrijf) {
+  const select = document.getElementById("boekMedewerker");
+  if (!select) return;
+
+  select.innerHTML = '<option value="">— kies medewerker —</option>';
+
+  const snap = await db()
+    .collection("bedrijven")
+    .doc(bedrijf)
+    .collection("medewerkers")
+    .orderBy("naam")
+    .get();
+
+  snap.forEach(doc => {
+    const data = doc.data();
+    const option = document.createElement("option");
+    option.value = data.naam;
+    option.textContent = data.naam;
+    select.appendChild(option);
+  });
+}
+
+async function setupCompanyAdminUI() {
+
+  const bedrijf = currentProfile.bedrijf;
+
+  document.getElementById("voorWie").value = bedrijf;
+  document.getElementById("voorWie").disabled = true;
+
+  document.getElementById("boekMedewerkerWrap").classList.remove("hidden");
+
+  [
+    "wachtStart",
+    "wachtEnd",
+    "rustStart",
+    "rustEnd"
+  ].forEach(id => {
+    document.getElementById(id).closest("label").style.display = "none";
+  });
+
+  await loadCompanyMedewerkers(bedrijf);
+}
 function attachRealtimeListeners(useAdminView) {
   safeUnsubscribe();
 
@@ -240,6 +286,7 @@ function renderTable() {
   allRows.forEach((r) => {
     if (whoFilter && r.voorWie !== whoFilter) return;
     if (isAdmin && medewerkerUidFilter && r.uid !== medewerkerUidFilter) return;
+    if (isCompanyAdmin() && r.voorWie !== currentProfile.bedrijf) return;
 
   const pauzeVal = r.pauzeDur ?? (parseFloat(r.pauze) || 0);
     const wachtVal = r.wachtDur ?? (parseFloat(r.wachturen) || 0);
@@ -247,7 +294,7 @@ function renderTable() {
 
   const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${getDisplayName(r.uid, r.email)}</td>
+      <td>${r.medewerkerNaam || getDisplayName(r.uid, r.email)}</td>
       <td>${r.voorWie || ''}</td>
       <td>${fmtDate(r.datum)}</td>
       <td>${r.starttijd || ''}</td>
@@ -299,6 +346,11 @@ $('#hours-form')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const form = e.currentTarget;
   
+  if (isCompanyAdmin() && !$('#boekMedewerker').value) {
+  alert('Kies eerst een medewerker.');
+  return;
+}
+  
   const dateVal = $('#datum').value;
   const start   = $('#starttijd').value;
   const end     = $('#eindtijd').value;
@@ -314,17 +366,23 @@ $('#hours-form')?.addEventListener('submit', async (e) => {
   const rustStart  = $('#rustStart')?.value || '';
   const rustEnd    = $('#rustEnd')?.value || '';
 
-  const base = {
-    voorWie    : $('#voorWie').value,
+ const base = {
+    voorWie: isCompanyAdmin() ? currentProfile.bedrijf : $('#voorWie').value,
+    medewerkerNaam: isCompanyAdmin() ? $('#boekMedewerker').value : '',
+    ingevoerdDoor: (currentUser || {}).email || '',
   pauzeStart,
     pauzeEnd,
     pauzeDur   : calcInterval(pauzeStart, pauzeEnd, parseTime(pauzeEnd) < parseTime(pauzeStart)),
     wachtStart,
     wachtEnd,
-    wachtDur   : calcInterval(wachtStart, wachtEnd, parseTime(wachtEnd) < parseTime(wachtStart)),
+    wachtDur: isCompanyAdmin()
+    ? 0
+    : calcInterval(wachtStart, wachtEnd, parseTime(wachtEnd) < parseTime(wachtStart)),
     rustStart,
     rustEnd,
-    rustDur    : calcInterval(rustStart, rustEnd, parseTime(rustEnd) < parseTime(rustStart)),
+   rustDur: isCompanyAdmin()
+    ? 0
+    : calcInterval(rustStart, rustEnd, parseTime(rustEnd) < parseTime(rustStart)),
     opmerkingen: $('#opmerkingen').value,
     email      : (currentUser || {}).email || '',
     goedgekeurd: false,
@@ -541,7 +599,10 @@ firebase.auth().onAuthStateChanged(async (user) => {
       const prof = await db().collection('users').doc(user.uid).get();
       const data = prof.exists ? prof.data() : {};
       role = data.role || 'user';
-      userMap[user.uid] = { email: user.email, ...data };
+userMap[user.uid] = { email: user.email, ...data };
+
+currentRole = role;
+currentProfile = { email: user.email, ...data };
     } catch (e) {
       console.warn('Kon profiel niet lezen, ga uit van user', e);
     }
@@ -576,8 +637,13 @@ firebase.auth().onAuthStateChanged(async (user) => {
       adminToggle.checked = isAdmin;
     }
 
-    // Heel belangrijk: pas na role + filters laden
-    attachRealtimeListeners(isAdmin);
+   // Speciale weergave voor bedrijfsadmin
+if (isCompanyAdmin()) {
+  await setupCompanyAdminUI();
+}
+
+// Heel belangrijk: pas na role + filters laden
+attachRealtimeListeners(isAdmin);
 
     addActivityListeners();
     startInactivityTimer();
