@@ -523,82 +523,78 @@ $('#exportCsv')?.addEventListener('click', () => {
 
 /* ===== Auth state ===== */
 firebase.auth().onAuthStateChanged(async (user) => {
+  // Altijd oude listener en oude data opruimen bij wisselen van account
+  safeUnsubscribe();
+  removeActivityListeners();
+  allRows = [];
+  userMap = {};
+  isAdmin = false;
+
   if (user) {
     currentUser = user;
 
-    // Rol ophalen + eigen profiel in cache zetten
     let role = 'user';
+
     try {
       const prof = await db().collection('users').doc(user.uid).get();
-      role = prof.exists ? (prof.data().role || 'user') : 'user';
-      userMap[user.uid] = { email: user.email, ...(prof.data() || {}) };
+      const data = prof.exists ? prof.data() : {};
+      role = data.role || 'user';
+      userMap[user.uid] = { email: user.email, ...data };
     } catch (e) {
       console.warn('Kon profiel niet lezen, ga uit van user', e);
     }
-    isAdmin = (role === 'admin');
 
-    // Profielen laden voor namen (admin = alle users)
+    isAdmin = role === 'admin';
+
     await loadUserProfiles();
 
-    // UI
-    $('#who').textContent  = getDisplayName(user.uid, user.email);
+    $('#who').textContent = getDisplayName(user.uid, user.email);
     $('#role').textContent = role;
     $('#role').style.display = 'inline-block';
 
     authView.classList.add('hidden');
     appView.classList.remove('hidden');
 
-    // Defaults (datum en maand)
     const today = new Date();
     $('#datum').valueAsDate = today;
     $('#filterMaand').value = today.toISOString().slice(0, 7);
 
-   // Filters + admin toggle resetten bij elke login
-const filterWie = $('#filterWie');
-if (filterWie) filterWie.value = '';
+    const filterWie = $('#filterWie');
+    if (filterWie) filterWie.value = '';
 
-const medewerkerFilterLogin = $('#filterMedewerker');
-if (medewerkerFilterLogin) medewerkerFilterLogin.value = '';
+    const filterMedewerker = $('#filterMedewerker');
+    if (filterMedewerker) {
+      filterMedewerker.innerHTML = '<option value="">Alle</option>';
+      filterMedewerker.value = '';
+    }
 
-const adminToggleLogin = $('#adminToggle');
-if (adminToggleLogin) {
-  adminToggleLogin.disabled = !isAdmin;
-  adminToggleLogin.checked = isAdmin;
-}
+    const adminToggle = $('#adminToggle');
+    if (adminToggle) {
+      adminToggle.disabled = !isAdmin;
+      adminToggle.checked = isAdmin;
+    }
 
-attachRealtimeListeners(isAdmin);
-addActivityListeners();
-startInactivityTimer();
+    // Heel belangrijk: pas na role + filters laden
+    attachRealtimeListeners(isAdmin);
+
+    addActivityListeners();
+    startInactivityTimer();
+
   } else {
-  safeUnsubscribe();
-  removeActivityListeners();
+    currentUser = null;
+    isAdmin = false;
+    allRows = [];
+    userMap = {};
 
-  currentUser = null;
-  isAdmin = false;
-  allRows = [];
-  userMap = {};
+    const tbody = $('#urenTable tbody');
+    if (tbody) tbody.innerHTML = '';
 
-  const tbody = $('#urenTable tbody');
-  if (tbody) tbody.innerHTML = '';
+    const totals = $('#totals');
+    if (totals) totals.textContent = 'Totaal: 0 uur';
 
-  const totals = $('#totals');
-  if (totals) totals.textContent = 'Totaal: 0 uur';
-
-  const adminToggle = $('#adminToggle');
-  if (adminToggle) {
-    adminToggle.checked = false;
-    adminToggle.disabled = true;
+    appView.classList.add('hidden');
+    authView.classList.remove('hidden');
   }
-
-  const medewerkerFilter = $('#filterMedewerker');
-  if (medewerkerFilter) {
-    medewerkerFilter.innerHTML = '<option value="">Alle</option>';
-    medewerkerFilter.value = '';
-  }
-
-  appView.classList.add('hidden');
-  authView.classList.remove('hidden');
-}
 });
 
 /* Footer-jaar */
