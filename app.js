@@ -553,20 +553,22 @@ firebase.auth().onAuthStateChanged(async (user) => {
     $('#datum').valueAsDate = today;
     $('#filterMaand').value = today.toISOString().slice(0, 7);
 
-    // Admin toggle
-    $$('#filterWie').value = '';
+   // Filters + admin toggle resetten bij elke login
+const filterWie = $('#filterWie');
+if (filterWie) filterWie.value = '';
 
-const medewerkerFilter = $('#filterMedewerker');
-if (medewerkerFilter) medewerkerFilter.value = '';
+const medewerkerFilterLogin = $('#filterMedewerker');
+if (medewerkerFilterLogin) medewerkerFilterLogin.value = '';
 
-$('#adminToggle').disabled = !isAdmin;
-$('#adminToggle').checked  = isAdmin;
+const adminToggleLogin = $('#adminToggle');
+if (adminToggleLogin) {
+  adminToggleLogin.disabled = !isAdmin;
+  adminToggleLogin.checked = isAdmin;
+}
 
 attachRealtimeListeners(isAdmin);
-
-    attachRealtimeListeners(isAdmin);
-    addActivityListeners();
-    startInactivityTimer();
+addActivityListeners();
+startInactivityTimer();
   } else {
   safeUnsubscribe();
   removeActivityListeners();
