@@ -561,12 +561,35 @@ firebase.auth().onAuthStateChanged(async (user) => {
     addActivityListeners();
     startInactivityTimer();
   } else {
-    safeUnsubscribe();
-    removeActivityListeners();
-    currentUser = null;
-    appView.classList.add('hidden');
-    authView.classList.remove('hidden');
+  safeUnsubscribe();
+  removeActivityListeners();
+
+  currentUser = null;
+  isAdmin = false;
+  allRows = [];
+  userMap = {};
+
+  const tbody = $('#urenTable tbody');
+  if (tbody) tbody.innerHTML = '';
+
+  const totals = $('#totals');
+  if (totals) totals.textContent = 'Totaal: 0 uur';
+
+  const adminToggle = $('#adminToggle');
+  if (adminToggle) {
+    adminToggle.checked = false;
+    adminToggle.disabled = true;
   }
+
+  const medewerkerFilter = $('#filterMedewerker');
+  if (medewerkerFilter) {
+    medewerkerFilter.innerHTML = '<option value="">Alle</option>';
+    medewerkerFilter.value = '';
+  }
+
+  appView.classList.add('hidden');
+  authView.classList.remove('hidden');
+}
 });
 
 /* Footer-jaar */
